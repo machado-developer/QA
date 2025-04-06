@@ -1,0 +1,16 @@
+2025-03-12T11:50:17.380Z
+Error: Unknown column 'st.expression' in 'field list'
+    at PromiseConnection.query (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\mysql2\lib\promise\connection.js:29:22)
+    at generateIndexes (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\@dbml\connector\dist\connectors\mysqlConnector.js:201:40)
+    at fetchSchemaJson (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\@dbml\connector\dist\connectors\mysqlConnector.js:375:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async connectionHandler (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\lib\cli\connector.js:24:24)
+
+2025-03-12T11:50:58.040Z
+Error: Unknown column 'st.expression' in 'field list'
+    at PromiseConnection.query (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\mysql2\lib\promise\connection.js:29:22)
+    at generateIndexes (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\@dbml\connector\dist\connectors\mysqlConnector.js:201:40)
+    at fetchSchemaJson (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\node_modules\@dbml\connector\dist\connectors\mysqlConnector.js:375:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async connectionHandler (C:\Users\anton\AppData\Local\nvm\v20.18.3\node_modules\@dbml\cli\lib\cli\connector.js:24:24)
+

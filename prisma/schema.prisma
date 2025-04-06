@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(CLIENTE) // CLIENT, OPERATOR, ADMIN
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookings            Booking[]
+  availabilities      Availability[]
+  images              CourtImage[]
+  logs                Log[]
+  reviews             Review[] // Relation to the Review model
+  notifications       Notification[] // Relation to the Notification model
+  passwordResetTokens PasswordResetToken[]
+  createdCourts       Court[]              @relation("UserCreatedCourts") // Relation to the Court model for created courts
+  managedCourts       Court[]              @relation("UserManagedCourts") // Relation to the Court model for managed courts
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid()) // Identificador único
+  userId    String // Relacionado ao usuário
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique // Código de recuperação (5 dígitos)
+  expiresAt DateTime // Expiração do código
+
+  @@index([userId]) // Índice para facilitar a busca pelo usuário
+}
+
+model Court {
+  id             String         @id @default(uuid())
+  name           String
+  address        String
+  city           String
+  description    String?
+  otherFields    Json? // Campos adicionais para informações extras
+  pricePerHour   Float
+  featuredImage  String // Imagem de destaque da quadra
+  courtImages    CourtImage[] // Relação para armazenar múltiplas imagens
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  availabilities Availability[]
+  bookings       Booking[]
+  User           User?          @relation("UserManagedCourts", fields: [userId], references: [id])
+  userId         String?
+  createdBy      User?          @relation("UserCreatedCourts", fields: [createdById], references: [id])
+  createdById    String?
+
+  @@unique([name]) // Nome único para cada quadra
+}
+
+model CourtImage {
+  id        String   @id @default(uuid())
+  courtId   String
+  userId    String? // Usuário que adicionou a imagem
+  url       String
+  createdAt DateTime @default(now())
+  court     Court    @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Availability {
+  id          String    @id @default(uuid())
+  courtId     String
+  userId      String? // Usuário responsável pela disponibilidade
+  startTime   DateTime
+  date        DateTime // Data da disponibilidade
+  period      Period // MANHA, TARDE, NOITE
+  endTime     DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String
+  updatedById String?
+  court       Court     @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+
+  @@unique([courtId, startTime, endTime]) // Evita horários duplicados para a mesma quadra
+}
+
+model Booking {
+  id             String        @id @default(uuid())
+  userId         String
+  courtId        String
+  availabilityId String
+  status         BookingStatus @default(PENDENTE) // PENDENTE, CONFIRMADO, CANCELADO
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  createdById    String
+  updatedById    String?
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  court          Court         @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  availability   Availability  @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
+  payment        Payment?      @relation
+
+  @@unique([availabilityId]) // Só permite um agendamento por horário disponível
+}
+
+enum Period {
+  MANHA
+  TARDE
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  courtId   String
+  rating    Int // Avaliação de 1 a 5 estrelas (validar no código ou no banco de dados)
+  comment   String? // Comentário opcional
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courtId]) // Um usuário pode avaliar uma quadra apenas uma vez
+}
+
+enum Role {
+  CLIENTE
+  OPERADOR
+  ADMINISTRADOR
+}
+
+enum BookingStatus {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
+  CONCLUIDO
+}
+
+model Log {
+  id        String   @id @default(cuid())
+  action    String
+  details   String
+  userId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model SystemConfig {
+  id    String @id @default(uuid())
+  key   String @unique // Exemplo: "booking_expiration_time"
+  value String // Armazena o tempo limite em minutos
+}
+
+model PaymentMethodConfig {
+  id        String    @id @default(uuid())
+  name      String    @unique // Exemplo: "Transferência Bancária", "PIX", "Dinheiro"
+  isActive  Boolean   @default(true) // Permite ativar/desativar métodos sem removê-los
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  payments  Payment[] // Relation to the Payment model
+}
+
+model Payment {
+  id        String              @id @default(uuid())
+  bookingId String              @unique
+  booking   Booking             @relation(fields: [bookingId], references: [id])
+  methodId  String
+  method    PaymentMethodConfig @relation(fields: [methodId], references: [id])
+  status    PaymentStatus       @default(PENDENTE)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+enum PaymentStatus {
+  PENDENTE
+  CONCLUIDO
+  CANCELADO
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
