@@ -1,4 +1,3 @@
-import { PaymentMethodConfig } from './../../../../node_modules/.pnpm/@prisma+client@6.5.0_prisma_fccffc52d17c43efe09300db03dc4958/node_modules/.prisma/client/index.d';
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { PrismaClient } from "@prisma/client";
