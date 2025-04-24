@@ -1,4 +1,5 @@
 // components/QuadraCard.tsx
+"use client"
 import { Divide, Map } from 'lucide-react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
@@ -6,14 +7,19 @@ import { useState } from 'react'
 import StarRating from './starRating'
 import Link from 'next/link'
 type Quadra = {
-    id: string
-    name: string
-    image: string
-    price: string,
-    address: string,
-    description?: string,
-    rating?: number,
-    category?: string
+    id: string;
+    name: string;
+    featuredImage: string;
+    pricePerHour: number;
+    city?: string,
+    address: string;
+    description?: string;
+    rating: number,
+    category?: {
+        id: string,
+        name: string
+    }[];
+    courtImages: { id: string; courtId: string; userId: string | null; url: string; createdAt: string; }[];
 }
 
 export default function QuadraCard({ quadra }: { quadra: Quadra }) {
@@ -25,10 +31,10 @@ export default function QuadraCard({ quadra }: { quadra: Quadra }) {
             className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl cursor-pointer transition-shadow duration-300 w-full"
         >
             <div className="bg-white shadow-md rounded-lg overflow-hidden w-full">
-                <Image src={quadra.image} alt={quadra.name} className="w-full    object-cover" width={400} height={200} />
+                <Image src={quadra.featuredImage} alt={quadra.name} className="w-full    object-cover" width={400} height={200} />
                 <div className="p-4">
                     <h3 className="text-lg font-semibold text-gray-800">{quadra.name}</h3>
-                    <p className="text-red-500 font-medium">{quadra.price}</p>
+                    <p className="text-red-500 font-medium">{quadra.pricePerHour}</p>
 
                     <div className="flex items-center mt-2">
                         <Map className="text-gray-500" size={16} />

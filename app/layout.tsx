@@ -1,10 +1,9 @@
 'use client';
 
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter } from 'lucide-react';
-import type { Metadata } from "next";
 import "@/app/globals.css";
 import goalImage from '@/app/assets/image/quadra-banner.webp';
 import { motion } from 'framer-motion';
@@ -14,14 +13,49 @@ import FiltroQuadras from '@/components/filtroQuadras';
 import AuthProvider from '@/components/auth-provider';
 import { useState } from 'react';
 import { useMediaQuery } from 'react-responsive';
+import { formatCurrency } from '@/lib/utils';
 
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const pathname = usePathname()
-  const pathsToIgnore = ['/auth', '/admin', "/perfil"];
+  const pathsToIgnore = ['/auth', '/admin', "/perfil","/sobre","/contactos"];
   const hideLayout = pathsToIgnore.some(path => pathname.startsWith(path));
   const [showMobileFiltro, setShowMobileFiltro] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 768 });
+
+
+  const [quadras, setQuadras] = useState<{
+    id: string;
+    name: string;
+    address: string;
+    city: string;
+    description: string;
+    pricePerHour: number;
+    featuredImage: string;
+    createdAt: string;
+    updatedAt: string;
+    userId: string | null;
+    createdById: string;
+    courtImages: { id: string; courtId: string; userId: string | null; url: string; createdAt: string; }[];
+    categories: { name: string };
+    availabilities: { id: string; courtId: string; userId: string | null; startTime: string; date: string; period: string; endTime: string; createdAt: string; updatedAt: string; createdById: string; updatedById: string | null; }[];
+  }[] | []>([]); // começa com null pra validar corretamente
+
+  const [modalAberto, setModalAberto] = useState(false);
+  const fetchQuadras = async () => {
+    try {
+      const response = await fetch(`/api/admin/courts?limit=5`);
+      const data = await response.json();
+
+      setQuadras(data.courts || null);
+    } catch (error) {
+      console.error("Erro ao buscar quadras:", error);
+    }
+  };
+  useEffect(() => {
+    fetchQuadras()
+  }, []);
+
   return (
     <html lang="pt-BR">
       <body>
@@ -34,9 +68,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
                 <HeaderWithMenuNonAuth />
                 {/* Banner Central */}
-                <div className="flex flex-col items-center justify-center bg-blue-900 text-white py-8">
-
-                </div>
+              
                 <div className="w-full h-80  bg-gray-300 flex items-center bg-center justify-centent bg-no-repeat bg-contain bg-cover relative" style={{ backgroundImage: `url(${goalImage.src})` }}>
                   <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white text-top p-8">
 
@@ -54,7 +86,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <div className="bg-white shadow-md p-4 flex justify-center items-center space-x-4 border-b overflow-x-auto">
 
                     <nav className="flex space-x-6">
-                      <Link href="/quadras?categoria=fotebol" className="text-gray-700 hover:text-blue-700 font-medium flex items-center space-x-2">
+                      <Link href="/quadras?categoria=footebol" className="text-gray-700 hover:text-blue-700 font-medium flex items-center space-x-2">
                         <Search className="w-4 h-4" />
                         <span>Futebol</span>
                       </Link>
@@ -80,7 +112,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 </div>
 
 
-                <div className="flex   container justify-between mx-1 py-6 px-4 md:px-8  m-0 w-full">
+                <div className="flex  justify-between mx-2 py-2 px-4 md:px-8  m-0 w-full">
                   {/* Menu Lateral Esquerdo (Filtros) */}
                   <aside className="hidden md:block md:w-1/1">
                     <div className="sticky top-[130px] max-h-[calc(100vh-100px)] overflow-y-auto">
@@ -100,9 +132,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                           <Filter className="mr-1 w-4 h-4" /> Filtro Avançado
                         </button>
                       ) : (
-                        <marker className="text-gray-700 font-medium">
-                          Encontre a melhor quadra para a sua equipe
-                        </marker>
+                        <div className="text-gray-700 font-medium overflow-hidden whitespace-nowrap">
+                          <div className="animate-scroll inline-block">
+                            Encontre a melhor quadra para a sua equipe
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -126,25 +160,27 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
                   {/* Menu Lateral Direito (Destaques e Recentes) */}
                   <aside className="hidden md:block md:w-1/5 lg:w-1/4">
-                    {/* Quadras Destacadas */}
-                    <div className="sticky top-[140px] max-h-[calc(100vh-100px)] overflow-y-auto">
+                    <div className="sticky top-[80px] max-h-[calc(100vh-100px)] overflow-y-auto">
                       <h2 className="text-lg font-semibold mb-3">Destaques</h2>
                       <div className="space-y-3">
-                        {[1, 2, 3].map((id) => (
-                          <div key={id} className="border p-2 rounded-lg shadow-sm w-full">
-                            <Image src="/quadra.jpg" width={150} height={100} alt="Quadra" className="rounded-md" />
-                            <p className="text-sm mt-2">Quadra Premium - R$ 100/h</p>
+                        {quadras.map(q => (
+                          <div key={q.id} className="border p-2 rounded-lg shadow-sm">
+                           <Link href={`/quadras/${q.id}`}>
+                              <Image src={q.featuredImage} width={150} height={100} alt="Quadra" className="rounded-md" />
+                              <p className="text-sm mt-2">{q.name}- {formatCurrency(q.pricePerHour)}/H</p>
+                            </Link>
                           </div>
                         ))}
                       </div>
 
-                      {/* Mais Recentes */}
                       <h2 className="text-lg font-semibold mt-6 mb-3">Mais Recentes</h2>
                       <div className="space-y-3">
-                        {[4, 5, 6].map((id) => (
-                          <div key={id} className="border p-2 rounded-lg shadow-sm">
-                            <Image src="/quadra.jpg" width={150} height={100} alt="Quadra" className="rounded-md" />
-                            <p className="text-sm mt-2">Nova Quadra - R$ 80/h</p>
+                        {quadras.map(q => (
+                          <div key={q.id} className="border p-2 rounded-lg shadow-sm">
+                            <Link href={`/quadras/${q.id}`}>
+                              <Image src={q.featuredImage} width={150} height={100} alt="Quadra" className="rounded-md" />
+                              <p className="text-sm mt-2">{q.name}- {formatCurrency(q.pricePerHour)}/H</p>
+                            </Link>
                           </div>
                         ))}
                       </div>

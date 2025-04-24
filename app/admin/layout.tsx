@@ -49,13 +49,13 @@ const Sidebar: React.FC<{ role: string | null | undefined, menuItems: any[], sid
     return (
         <>
             {/* Sidebar fixa no desktop */}
-            <aside className="fixed top-0 left-0 w-64 h-screen p-4  bg-black text-white shadow-lg hidden md:block z-50">
+            <aside className="fixed top-0 left-0 w-50 h-screen p-4 bg-black text-white shadow-lg hidden md:block z-50 overflow-y-auto">
                 <div className="flex items-center justify-center mb-6">
                     <div className="h-16 w-16 rounded-full bg-white flex items-center justify-center">
                         <Image src={logo} alt="Logo" width={40} height={40} className="h-12 w-auto" />
                     </div>
                 </div>
-                <div className="flex items-center rounded-lg justify-between mb-6 bg-white"  >
+                <div className="flex items-center rounded-lg justify-between mb-6 bg-white">
                     <h2 className="text-xl text-black p-4 font-bold">{role === "ADMINISTRADOR" ? "Admin Panel" : "User Panel"}</h2>
                 </div>
 
@@ -67,7 +67,7 @@ const Sidebar: React.FC<{ role: string | null | undefined, menuItems: any[], sid
                                 key={item.name}
                                 href={item.link}
                                 className={`flex items-center p-2 rounded-lg transition ${isActive
-                                   ? "bg-white text-gray-900 font-bold"
+                                    ? "bg-white text-gray-900 font-bold"
                                     : "hover:bg-gray-400 hover:text-gray-800"
                                     }`}
                             >
@@ -81,7 +81,7 @@ const Sidebar: React.FC<{ role: string | null | undefined, menuItems: any[], sid
 
             {/* Sidebar no mobile */}
             {sidebarOpen && (
-                <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setSidebarOpen(false)}></div>
+                <div className="fixed inset-0 bg-black/50 z-40 md:hidden overflow-y-auto" onClick={() => setSidebarOpen(false)}></div>
             )}
             <aside className={`fixed top-0 left-0 w-64 h-screen p-4 bg-black text-white shadow-lg z-50 transition-transform md:hidden ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 <button className="absolute top-4 right-4 text-white" onClick={() => setSidebarOpen(false)}>

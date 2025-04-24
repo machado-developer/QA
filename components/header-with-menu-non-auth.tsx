@@ -30,9 +30,9 @@ function HeaderWithMenuNonAuth() {
 
     const menu = [
         { name: "Início", link: "/" },
-        { name: "Sobre", link: "/about" },
+        { name: "Sobre", link: "/sobre" },
         { name: "Categorias", link: "/categorias?type=all", children: [{ name: "Quadras", link: "/services" }, { name: "Eventos", link: "/events" }] },
-        { name: "Contato", link: "/contact", children: [{ name: "Fale Conosco", link: "/contact" }] },
+        { name: "Contato", link: "/contactos", children: [{ name: "Fale Conosco", link: "/contact" }] },
     ];
     const socialIcons = [
         { name: "Facebook", icon: <Facebook className={`${scrolled ? "text-white" : "text-gray-700"} hover:text-blue-600 text-lg`} /> },

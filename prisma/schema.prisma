@@ -55,6 +55,7 @@ model Court {
   userId         String?
   createdBy      User?          @relation("UserCreatedCourts", fields: [createdById], references: [id])
   createdById    String?
+  category       Category[]     @relation("CategoriaCourts")
 
   @@unique([name]) // Nome único para cada quadra
 }
@@ -75,7 +76,7 @@ model Availability {
   userId      String? // Usuário responsável pela disponibilidade
   startTime   DateTime
   date        DateTime // Data da disponibilidade
-  period      Period // MANHA, TARDE, NOITE
+  period      Period? // MANHA, TARDE, NOITE
   endTime     DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -109,6 +110,15 @@ model Booking {
 enum Period {
   MANHA
   TARDE
+  NOITE
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  courts    Court[]  @relation("CategoriaCourts")
 }
 
 model Review {
@@ -140,9 +150,9 @@ model Log {
   id        String   @id @default(cuid())
   action    String
   details   String
-  userId    String
+  userId    String?
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
 
 model SystemConfig {
@@ -161,14 +171,21 @@ model PaymentMethodConfig {
 }
 
 model Payment {
-  id        String              @id @default(uuid())
-  bookingId String              @unique
-  booking   Booking             @relation(fields: [bookingId], references: [id])
-  methodId  String
-  method    PaymentMethodConfig @relation(fields: [methodId], references: [id])
-  status    PaymentStatus       @default(PENDENTE)
-  createdAt DateTime            @default(now())
-  updatedAt DateTime            @updatedAt
+  id           String              @id @default(uuid())
+  bookingId    String              @unique
+  booking      Booking             @relation(fields: [bookingId], references: [id])
+  methodId     String
+  description  String
+  method       PaymentMethodConfig @relation(fields: [methodId], references: [id])
+  status       PaymentStatus       @default(PENDENTE)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  cliente      String
+  ammount      Decimal
+  telefone     String
+  codigo       String              @unique
+  creatorName  String
+  creatorEmail String
 }
 
 enum PaymentStatus {

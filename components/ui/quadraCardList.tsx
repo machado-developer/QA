@@ -7,16 +7,28 @@ import QuadraCard from "./quadraCard";
 type Quadra = {
     id: string;
     name: string;
-    image: string;
-    price: string;
+    featuredImage: string;
+    pricePerHour: number;
+    city?: string,
     address: string;
     description?: string;
-    category?: string;
+    rating: number,
+    category?: {
+        id: string,
+        name: string
+    }[];
+    courtImages: { id: string; courtId: string; userId: string | null; url: string; createdAt: string; }[];
 };
 
-export default function QuadraCardList({ categoria, quadras }: { categoria: string; quadras: Quadra[] }) {
-    const quadrasFiltradas = quadras.filter((quadra) => quadra.category === categoria);
-    
+export default function QuadraCardList({ categoria, quadras }: { categoria: { name: string, id: string }; quadras: Quadra[] }) {
+    const quadrasFiltradas = quadras.filter((quadra) => {
+        console.log("QUADRa 1", quadra);
+        return quadra.category?.some((cat: { name: string }) => cat.name === categoria.name) || []
+    }
+    );
+
+    console.log("QUADRAS FILTRADAS AGORA", quadrasFiltradas);
+
     const itemsPerPage = 4;
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -31,7 +43,7 @@ export default function QuadraCardList({ categoria, quadras }: { categoria: stri
         <div className="mb-12 w-full">
             <div className="flex justify-between items-center mb-6 w-full">
                 <h2 className="text-2xl font-bold text-green-800 border-b-2 border-green-600 pb-1 w-fit">
-                    {categoria} <span className="text-gray-500">({quadrasFiltradas.length})</span>
+                    {categoria.name} <span className="text-gray-500">({quadrasFiltradas.length})</span>
                 </h2>
                 <Link href={`/quadras?categoria=${categoria}`} className="text-sm text-green-600 font-bold hover:underline">
                     Ver mais

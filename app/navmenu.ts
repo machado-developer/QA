@@ -24,14 +24,23 @@ const adminMenu = [
     { name: "Usuários", link: `${pathAmin}users`, icon: Users },
     { name: "Quadras", link: `${pathAmin}cuart`, icon: PlayCircle },
     { name: "Categorias", link: `${pathAmin}categories `, icon: ListCollapse },
-    { name: "Pagamentos", link: `${pathAmin}payments `, icon:DollarSign },
+    { name: "Pagamentos", link: `${pathAmin}payments `, icon: DollarSign },
+    { name: "Metodo  de Pagamentos", link: `${pathAmin}payments-methods`, icon: DollarSign },
 
-    { name: "Reservas", link: `${pathAmin}book `, icon: CalendarDays },
-        { name: "Relatórios", link: `${pathAmin}reports`, icon: BarChart4 },
+    { name: "Reservas", link: `${pathAmin}books `, icon: CalendarDays },
+    { name: "Relatórios", link: `${pathAmin}reports`, icon: BarChart4 },
     {
         name: "Auditoria", link: `${pathAmin}logs`, icon: Shield
     },
 
 ];
 
-export { adminMenu,};
+
+const operadorMenu = [
+    { name: "Dashboard", link: pathAmin, icon: LayoutDashboard },
+    { name: "Quadras", link: `${pathAmin}cuart`, icon: PlayCircle },
+    { name: "Pagamentos", link: `${pathAmin}payments `, icon: DollarSign },
+    { name: "Reservas", link: `${pathAmin}books `, icon: CalendarDays },
+];
+
+export { adminMenu, operadorMenu };

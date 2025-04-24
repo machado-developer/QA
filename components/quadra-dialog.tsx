@@ -13,16 +13,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-// Importações no topo...
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
 
 interface CourtDialogProps {
   open: boolean;
@@ -32,23 +26,23 @@ interface CourtDialogProps {
   court?: CourtForm;
 }
 
-
 const courtSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(1, "O nome é obrigatório"),
-  address: z.string().min(1, "Endereço obrigatório"),
-  city: z.string().min(1, "Cidade obrigatória"),
+  name: z.string().min(1, "Name is required"),
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
   description: z.string().optional(),
-  pricePerHour: z.coerce.number().positive("Preço deve ser positivo"),
-  featuredImage: z.string().url("Imagem inválida"),
+  pricePerHour: z.coerce.number().positive("Price must be positive"),
+  featuredImage: z.string().url("Invalid image URL"),
   categoryId: z.string().optional(),
 });
 
 type CourtForm = z.infer<typeof courtSchema>;
 
-interface Disponibilidade {
-  data: string; // yyyy-MM-dd
-  horarios: string[];
+interface Availability {
+  date: string;
+  startTime: string;
+  endTime: string;
 }
 
 export default function CourtDialog({
@@ -58,20 +52,15 @@ export default function CourtDialog({
   isEditing = false,
   court,
 }: CourtDialogProps) {
-  // ESTADO EXTRA
-  const [disponibilidades, setDisponibilidades] = useState<Disponibilidade[]>([]);
-  const [novaData, setNovaData] = useState("");
-  const [novoHorario, setNovoHorario] = useState("");
-  const [horariosTemp, setHorariosTemp] = useState<string[]>([]);
+  const [availability, setAvailability] = useState<Availability[]>([]);
+  const [newDate, setNewDate] = useState("");
+  const [newStartTime, setNewStartTime] = useState("");
+  const [newEndTime, setNewEndTime] = useState("");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoryId, setCategoryId] = useState("");
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
-  // ... estados e hooks originais
 
-  const adicionarHorarioTemp = () => {
-    if (!novoHorario) return;
-    setHorariosTemp((prev) => [...prev, novoHorario]);
-    setNovoHorario("");
-  };
   const {
     register,
     handleSubmit,
@@ -93,30 +82,65 @@ export default function CourtDialog({
   });
 
   const featuredImage = watch("featuredImage");
-  const adicionarDisponibilidade = () => {
-    if (!novaData || horariosTemp.length === 0) return;
 
-    setDisponibilidades((prev) => [
+  const addAvailability = () => {
+    if (!newDate || !newStartTime || !newEndTime) return;
+
+    const startDateTime = new Date(`${newDate}T${newStartTime}`);
+    const endDateTime = new Date(`${newDate}T${newEndTime}`);
+
+    // Check if the times are valid
+    if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
+      setError("Invalid date or time format.");
+      return;
+    }
+    setAvailability((prev) => [
       ...prev,
-      { data: novaData, horarios: horariosTemp },
+      {
+        date: newDate,
+        startTime: newStartTime,
+        endTime: newEndTime,
+      },
     ]);
-    setNovaData("");
-    setHorariosTemp([]);
+    setNewDate("");
+    setNewStartTime("");
+    setNewEndTime("");
   };
 
-  const removerDisponibilidade = (index: number) => {
-    setDisponibilidades((prev) => prev.filter((_, i) => i !== index));
+
+  const selectCategory = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedCategoryId = e.target.value;
+    setCategoryId(selectedCategoryId);
+    setValue("categoryId", selectedCategoryId);
+  }
+  const removeAvailability = (index: number) => {
+    setAvailability((prev) => prev.filter((_, i) => i !== index));
   };
+
+  useEffect(() => {
+    reset({})
+    setError("")
+  }, [open])
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/admin/categories");
+      const data = await response.json();
+      return data.categories;
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  }
 
   const onSubmit = async (data: CourtForm) => {
     try {
       const payload = {
         ...data,
-        disponibilidades,
+        availabilities: availability,
       };
 
       const response = await fetch(
-        isEditing ? `/api/courts/${data.id}` : "/api/courts",
+        isEditing ? `/api/admin/courts/${data.id}` : "/api/admin/courts",
         {
           method: isEditing ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -124,16 +148,38 @@ export default function CourtDialog({
         }
       );
 
-      if (!response.ok) throw new Error("Erro ao salvar quadra");
+      if (!response.ok) throw new Error("Error saving court");
 
       reset();
-      setDisponibilidades([]);
+      setAvailability([]);
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Erro desconhecido");
+      setError(error instanceof Error ? error.message : "Unknown error");
     }
   };
+
+  useEffect(() => {
+    if (open && isEditing && court) {
+      reset({
+        id: court.id,
+        name: court.name,
+        address: court.address,
+        city: court.city,
+        description: court.description,
+        pricePerHour: court.pricePerHour,
+        featuredImage: court.featuredImage,
+        categoryId: court.categoryId ?? "",
+      });
+
+      if ((court as any).availability) {
+        setAvailability((court as any).availability);
+      }
+    } else if (open && !isEditing) {
+      reset();
+      setAvailability([]);
+    }
+  }, [open, isEditing, court, reset]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,25 +196,34 @@ export default function CourtDialog({
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Erro ao fazer upload");
+      if (!res.ok) throw new Error(data.message || "Upload failed");
 
       setValue("featuredImage", data.url);
     } catch (err) {
       console.error(err);
-      setError("Falha no upload da imagem.");
+      setError("Image upload failed.");
     } finally {
       setUploading(false);
     }
   };
 
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const categoriesData = await fetchCategories();
+      setCategories(categoriesData);
+    };
+
+    fetchData();
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar Quadra" : "Cadastrar Nova Quadra"}</DialogTitle>
+          <DialogTitle>{isEditing ? "Edit Court" : "Register New Court"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 overflow-y-auto max-h-[80vh]">
-
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
@@ -176,101 +231,106 @@ export default function CourtDialog({
           )}
 
           <div>
-            <label>Nome</label>
+            <label>Name</label>
             <Input {...register("name")} />
             {errors.name && <p className="text-destructive">{errors.name.message}</p>}
           </div>
 
           <div>
-            <label>Endereço</label>
+            <label>Address</label>
             <Input {...register("address")} />
             {errors.address && <p className="text-destructive">{errors.address.message}</p>}
           </div>
 
           <div>
-            <label>Cidade</label>
+            <label>City</label>
             <Input {...register("city")} />
             {errors.city && <p className="text-destructive">{errors.city.message}</p>}
           </div>
 
           <div>
-            <label>Descrição</label>
+            <label>Description</label>
             <Textarea {...register("description")} />
           </div>
-
+          <div className="space-y-2">
+            <Select onValueChange={(value) => setValue("categoryId", value)} defaultValue={categoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.categoryId && <p className="text-sm text-destructive">{errors.categoryId.message}</p>}
+          </div>
           <div>
-            <label>Preço por hora (KZ)</label>
+            <label>Price per hour (KZ)</label>
             <Input type="number" step="0.01" {...register("pricePerHour")} />
             {errors.pricePerHour && <p className="text-destructive">{errors.pricePerHour.message}</p>}
           </div>
 
-
-
           <div>
-            <label>Imagem de destaque</label>
+            <label>Featured Image</label>
             <Input type="file" accept="image/*" onChange={handleImageUpload} />
-            {uploading && <p className="text-muted-foreground text-sm">Enviando imagem...</p>}
+            {uploading && <p className="text-muted-foreground text-sm">Uploading image...</p>}
             {featuredImage && (
-              <img src={featuredImage} alt="Imagem" className="h-32 rounded mt-2" />
+              <img src={featuredImage} alt="Featured" className="h-32 rounded mt-2" />
             )}
             {errors.featuredImage && (
               <p className="text-destructive">{errors.featuredImage.message}</p>
             )}
           </div>
 
-          {/* 🟢 CAMPO DE DISPONIBILIDADE */}
-          <div className="border rounded p-4">
-            <h3 className="font-semibold mb-2">Disponibilidades</h3>
+          {/* Availability */}
+            {!isEditing && (
+            <div className="border rounded p-4">
+              <h3 className="font-semibold mb-2">Availability</h3>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <Input
                 type="date"
-                value={novaData}
-                onChange={(e) => setNovaData(e.target.value)}
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
               />
-              <div className="flex gap-2">
-                <Input
-                  type="time"
-                  value={novoHorario}
-                  onChange={(e) => setNovoHorario(e.target.value)}
-                />
-                <Button type="button" variant="outline" onClick={adicionarHorarioTemp}>
-                  + Horário
-                </Button>
+              <Input
+                type="time"
+                value={newStartTime}
+                onChange={(e) => setNewStartTime(e.target.value)}
+              />
+              <Input
+                type="time"
+                value={newEndTime}
+                onChange={(e) => setNewEndTime(e.target.value)}
+              />
+              <Button type="button" variant="outline" onClick={addAvailability}>
+                + Add
+              </Button>
               </div>
-            </div>
 
-            {/* Horários adicionados à data */}
-            {horariosTemp.length > 0 && (
-              <div className="mt-2 text-sm text-muted-foreground">
-                Horários: {horariosTemp.join(", ")}
-              </div>
-            )}
-
-            <Button type="button" onClick={adicionarDisponibilidade} className="mt-2">
-              Adicionar Data
-            </Button>
-
-            {/* Lista de disponibilidades adicionadas */}
-            {disponibilidades.length > 0 && (
+              {availability.length > 0 && (
               <ul className="mt-4 space-y-1 text-sm">
-                {disponibilidades.map((disp, index) => (
-                  <li key={index} className="flex justify-between">
-                    <span>
-                      {format(new Date(disp.data), "dd/MM/yyyy")} – {disp.horarios.join(", ")}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removerDisponibilidade(index)}
-                      className="text-red-500 text-xs"
-                    >
-                      Remover
-                    </button>
-                  </li>
+                {availability.map((slot, index) => (
+                <li key={index} className="flex justify-between">
+                  <span>
+                  {format(new Date(slot.date), "dd/MM/yyyy")} – {slot.startTime}–{slot.endTime}
+                  </span>
+                  <button
+                  type="button"
+                  onClick={() => removeAvailability(index)}
+                  className="text-red-500 text-xs"
+                  >
+                  Remove
+                  </button>
+                </li>
                 ))}
               </ul>
+              )}
+            </div>
             )}
-          </div>
 
           <Button
             type="submit"
@@ -279,11 +339,11 @@ export default function CourtDialog({
           >
             {isSubmitting
               ? isEditing
-                ? "Atualizando..."
-                : "Registrando..."
+                ? "Updating..."
+                : "Registering..."
               : isEditing
-                ? "Atualizar Quadra"
-                : "Cadastrar Quadra"}
+                ? "Update Court"
+                : "Register Court"}
           </Button>
         </form>
       </DialogContent>

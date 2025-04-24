@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@radix-ui/react-dropdown-menu";
 import { Button } from "react-day-picker";
+import { useSession } from "next-auth/react";
 
 export default function ReservasPage() {
     const [reservas, setreservas] = useState([]);
@@ -12,9 +13,12 @@ export default function ReservasPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [selectedTransaction, setSelectedTransaction] = useState(null);
 
+    const { data: session, status } = useSession();
+    const clienteId = session?.user.id
+
     const fetchReservas = async () => {
         // Fetch reservas from your API or database
-        const response = await fetch("/api/reservas");
+        const response = await fetch(`/api/bookings?clientId=${clienteId}`);
         const data = await response.json();
         setreservas(data);
     };
@@ -22,7 +26,7 @@ export default function ReservasPage() {
 
     const handleDelete = async (reserva: { id: string }) => {
         // Delete reserva logic
-        await fetch(`/api/reservas/${reserva.id}`, { method: "DELETE" });
+        await fetch(`/api/bookings/${reserva.id}`, { method: "DELETE" });
         fetchReservas();
     };
 
@@ -42,7 +46,7 @@ export default function ReservasPage() {
                     <Table className="w-full">
                         <TableHeader>
                             <TableRow>
-                               
+
                                 <TableHead>Tipo</TableHead>
                                 <TableHead>Data</TableHead>
                                 <TableHead>Hora</TableHead>

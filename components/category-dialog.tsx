@@ -15,13 +15,19 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
+
+
 const categorySchema = z.object({
   name: z.string().min(1, "O nome da categoria é obrigatório"),
-  type: z.enum(["RECEITA", "DESPESA"], { required_error: "Selecione um tipo" }),
 })
 
 type CategoryForm = z.infer<typeof categorySchema>
 
+export interface ICategory {
+  id: string
+  name: string
+  createdAt?: string
+}
 interface CategoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -51,7 +57,7 @@ export default function CategoryDialog({
   useEffect(() => {
     if (isEditing && category) {
       setValue("name", category.name)
-      setValue("type", category.type)
+
     } else {
       reset()
     }
@@ -59,7 +65,7 @@ export default function CategoryDialog({
 
   const onSubmit = async (data: CategoryForm) => {
     try {
-      const url = isEditing ? `/api/categories/${category?.id}` : "/api/categories"
+      const url = isEditing ? `/api/admin/categories/${category?.id}` : "/api/admin/categories"
       const method = isEditing ? "PUT" : "POST"
 
       const response = await fetch(url, {
@@ -80,6 +86,7 @@ export default function CategoryDialog({
     }
   }
 
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -93,27 +100,15 @@ export default function CategoryDialog({
             </Alert>
           )}
           <div className="space-y-2">
-           <Input 
-autoComplete="new-password"
+            <Input
+              autoComplete="new-password"
               placeholder="Nome da Categoria"
               {...register("name")}
               className={errors.name ? "border-destructive" : ""}
             />
             {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
           </div>
-          <div className="space-y-2">
-            <Select onValueChange={(value) => setValue("type", value as "RECEITA" | "DESPESA")} defaultValue={category?.type}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="RECEITA">Receita</SelectItem>
-                <SelectItem value="DESPESA">Despesa</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.type && <p className="text-sm text-destructive">{errors.type.message}</p>}
-          </div>
-          <Button type="submit" className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white" disabled={isSubmitting}>
+          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
             {isSubmitting ? (isEditing ? "Atualizando..." : "Adicionando...") : isEditing ? "Atualizar Categoria" : "Adicionar Categoria"}
           </Button>
         </form>

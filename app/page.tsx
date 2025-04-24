@@ -5,108 +5,91 @@ import { useEffect, useState } from 'react';
 import { Search, Filter } from 'lucide-react';
 import quadraPlaceholder from '@/app/assets/image/atletas.svg';
 import QuadraCardList from '@/components/ui/quadraCardList';
+import { useSearchParams } from 'next/navigation';
 
-const mockData = [
-  {
-    id: "1",
-    name: 'Quadra Society A',
-    price: 'R$ 100/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "2",
-    name: 'Quadra de Tênis B',
-    price: 'R$ 80/h',
-    category: 'Tênis',
-    image: quadraPlaceholder,
-    address: 'Rua Tênis, 456',
-  },
-  {
-    id: "3",
-    name: 'Quadra de Basquete C',
-    price: 'R$ 120/h',
-    category: 'Basquete',
-    image: quadraPlaceholder,
-    address: 'Rua Basquete, 789',
-
-  },
-  {
-    id: "4",
-    name: 'Quadra de Basquete A',
-    price: 'R$ 120/h',
-    category: 'Basquete',
-    image: quadraPlaceholder,
-    address: 'Rua Basquete, 789',
-
-  },
-  {
-    id: "5",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "6",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "7",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "8",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "9",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  {
-    id: "10",
-    name: 'Quadra Society D',
-    price: 'R$ 105/h',
-    category: 'Futebol',
-    image: quadraPlaceholder,
-    address: 'Rua Futebol, 123',
-  },
-  // Adicione mais quadras conforme necessário
-];
 
 export default function HomePage() {
-  const [quadras, setQuadras] = useState(mockData);
+  const searchParams = useSearchParams();
+  const [quadras, setQuadras] = useState<any[]>([]);
+  const [quadrasFiltradas, setQuadrasFiltradas] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{ name: string, id: string, courts?: any }[]>([]);
+
+  const removeAcentos = (str: string) =>
+    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
   useEffect(() => {
-    // Aqui você pode buscar dados reais da API
+    const nome = searchParams.get("name")?.toLowerCase() || "";
+    const endereco = searchParams.get("address")?.toLowerCase() || "";
+    const categorias = searchParams.get("category")?.toLowerCase().split(",") || [];
+    const preco = parseFloat(searchParams.get("pricePerHour") || "");
+
+    const filtradas = quadras.filter((quadra) => {
+      const matchNome = nome
+        ? removeAcentos(quadra.name?.toLowerCase() || "").includes(removeAcentos(nome))
+        : true;
+
+      const matchEndereco = endereco
+        ? removeAcentos(quadra.address?.toLowerCase() || "").includes(removeAcentos(endereco))
+        : true;
+
+      const matchCategoria = categorias.length > 0 && categorias[0] !== ""
+        ? categorias.some((cat: string) =>
+          (quadra.category || []).some((qcat: string) =>
+            removeAcentos(qcat?.toLowerCase() || "") === removeAcentos(cat.trim())
+          )
+        )
+        : true;
+
+      const matchPreco = !isNaN(preco)
+        ? parseFloat(quadra.pricePerHour) <= preco
+        : true;
+
+      return matchNome && matchEndereco && matchCategoria && matchPreco;
+    });
+
+    setQuadrasFiltradas(filtradas);
+  }, [searchParams, quadras]);
+
+  useEffect(() => {
+    fetchQuadras();
   }, []);
 
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  const fetchQuadras = async () => {
+    try {
+      const response = await fetch("/api/admin/courts");
+      const data = await response.json();
+      console.log("DATA COURTS", data);
+
+      setQuadras(data.courts || []);
+    } catch (error) {
+      console.error("Erro ao buscar quadras:", error);
+    }
+  };
+
+  console.log("AS QUADRAS", quadras);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/admin/categories");
+      const data = await response.json();
+      console.log("DATA Categorias", data);
+
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error("Erro ao buscar categoriass:", error);
+    }
+  };
   return (
     <main className="px-4 sm:px-6 lg:px-12 py-8 w-full">
       
-
       {/* Listagem de quadras */}
       <section>
-        {['Futebol', 'Tênis', 'Basquete'].map((categoria) => (
-          <QuadraCardList key={categoria} categoria={categoria} quadras={quadras.filter(quadra => quadra.category === categoria)} />
+        {categories.map((categoria) => (
+
+          <QuadraCardList key={categoria.name} categoria={categoria} quadras={quadras.filter(quadra => quadra.category.some((cat: { name: string }) => cat.name === categoria?.name))} />
         ))}
         {quadras.length === 0 && (
           <div className="text-center">

@@ -36,7 +36,7 @@ const userSchema = z.object({
         ),
     email: z.string().email("Email inválido"),
     password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres"),
-    role: z.enum(["ADMINISTRADOR", "CLIENTE"]),
+    role: z.enum(["ADMINISTRADOR", "CLIENTE", "OPERADOR"],),
 });
 
 type UserForm = z.infer<typeof userSchema>;
@@ -51,7 +51,7 @@ interface UserDialogProps {
         name: string;
         email: string;
         password?: string;
-        role: "ADMINISTRADOR" | "CLIENTE";
+        role: "ADMINISTRADOR" | "CLIENTE" | "OPERADOR";
     };
 }
 
@@ -151,13 +151,14 @@ export default function UserDialog({
                     />
                     <Select
                         value={selectedRole}
-                        onValueChange={(value) => setValue("role", value as "ADMINISTRADOR" | "CLIENTE")}
+                        onValueChange={(value) => setValue("role", value as "ADMINISTRADOR" | "CLIENTE" | "OPERADOR")}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Selecione o papel" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="ADMINISTRADOR">ADMINISTRADOR</SelectItem>
+                            <SelectItem value="OPERADOR">OPERADOR</SelectItem>
                             <SelectItem value="CLIENTE">CLIENTE</SelectItem>
                         </SelectContent>
                     </Select>

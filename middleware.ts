@@ -1,36 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authMiddleware } from "./middleware/auth";
-import { roleRedirectMiddleware } from "./middleware/roleRedirect";
+import authMiddleware from "@/middleware/auth"
+import roleRedirectMiddleware from "@/middleware/roleRedirect"
 import { getToken } from "next-auth/jwt";
-import { log } from "console";
 
-
+// MIDDLEWARE CENTRAL
 export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
-  if (req.nextUrl.pathname.startsWith("/auth/login") && token) {
-    console.log("Token:", token);
-    console.log("Token role:", token.role);
-    const redirectTo =
-      String(token.role).toLocaleLowerCase() === "administrador"
-        ? "/admin/dashboard"
-        : String(token.role).toLocaleLowerCase() === "cliente"
-          ? "/perfil/dash"
-          : "/perfil/dash";
+  // LOGIN REDIRECT — Apenas para /auth/login
+  if (pathname === "/auth/login") {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    if (token) {
+      const role = String(token.role).toLowerCase();
 
-    return NextResponse.redirect(new URL(redirectTo, req.url));
+      const redirectTo =
+        role === "administrador"
+          ? "/admin/dashboard"
+          : role === "operador"
+            ? "/operador/dashboard"
+            : "/perfil/dash"; // Fallback para cliente
+
+      return NextResponse.redirect(new URL(redirectTo, req.url));
+    }
+
+    return NextResponse.next(); // Deixa acessar login se não estiver logado
   }
 
-  let response = await authMiddleware(req);
-  if (response && response.status !== 200) return response;
+  // ROTAS ADMIN — executa auth + roleRedirect
+  if (pathname.startsWith("/admin")) {
+    const authRes = await authMiddleware(req);
+    if (authRes && authRes.status !== 200) return authRes;
 
-  response = await roleRedirectMiddleware(req);
-  if (response && response.status !== 200) return response;
+    const roleRes = await roleRedirectMiddleware(req);
+    if (roleRes && roleRes.status !== 200) return roleRes;
 
-  return response;
+    return NextResponse.next();
+  }
+
+  // ROTAS PERFIL — apenas authMiddleware
+  if (pathname.startsWith("/perfil")) {
+    const authRes = await authMiddleware(req);
+    if (authRes && authRes.status !== 200) return authRes;
+
+    return NextResponse.next();
+  }
+
+  // Outras rotas seguem normalmente
+  return NextResponse.next();
 }
 
-// Define os caminhos que o middleware vai proteger
+// Define somente as rotas que devem passar por essa lógica
 export const config = {
-  matcher: ["/perfil/:path*", "/admin/:path*",],
+  matcher: ["/auth/login", "/admin/:path*", "/perfil/:path*"],
 };
