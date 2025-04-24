@@ -83,6 +83,7 @@ export default function HomePage() {
     }
   };
   return (
+    
     <main className="px-4 sm:px-6 lg:px-12 py-8 w-full">
       
       {/* Listagem de quadras */}

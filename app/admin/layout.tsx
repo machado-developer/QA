@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { Suspense, useMemo, useState } from "react";
 import { Menu, X } from "lucide-react";
 import Loading from "@/loading";
 import { adminMenu } from "../navmenu";
@@ -30,16 +30,18 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 
     return (
-        <div className="flex min-h-screen">
-            {/* Sidebar fixa no desktop, responsiva no mobile */}
-            <Sidebar role={role} menuItems={adminMenu} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <Suspense fallback={<Loading></Loading>} >
+            <div className="flex min-h-screen">
+                {/* Sidebar fixa no desktop, responsiva no mobile */}
+                <Sidebar role={role} menuItems={adminMenu} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-            <div className="flex flex-col flex-1 md:ml-64">
-                <Header username={username} setSidebarOpen={setSidebarOpen} />
-                <main className="flex-1 p-6 mt-8 overflow-auto pb-16">{status === "authenticated" ? children : <Skeleton />}</main>
-                <Footer role={role} />
+                <div className="flex flex-col flex-1 md:ml-64">
+                    <Header username={username} setSidebarOpen={setSidebarOpen} />
+                    <main className="flex-1 p-6 mt-8 overflow-auto pb-16">{status === "authenticated" ? children : <Skeleton />}</main>
+                    <Footer role={role} />
+                </div>
             </div>
-        </div>
+        </Suspense>
     );
 };
 
@@ -48,6 +50,7 @@ const Sidebar: React.FC<{ role: string | null | undefined, menuItems: any[], sid
 
     return (
         <>
+
             {/* Sidebar fixa no desktop */}
             <aside className="fixed top-0 left-0 w-50 h-screen p-4 bg-black text-white shadow-lg hidden md:block z-50 overflow-y-auto">
                 <div className="flex items-center justify-center mb-6">
