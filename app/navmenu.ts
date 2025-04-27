@@ -28,7 +28,7 @@ const adminMenu = [
     { name: "Metodo  de Pagamentos", link: `${pathAmin}payments-methods`, icon: DollarSign },
 
     { name: "Reservas", link: `${pathAmin}books `, icon: CalendarDays },
-    { name: "Relatórios", link: `${pathAmin}reports`, icon: BarChart4 },
+    { name: "Relatórios & Estatisticas", link: `${pathAmin}reports`, icon: BarChart4 },
     {
         name: "Auditoria", link: `${pathAmin}logs`, icon: Shield
     },

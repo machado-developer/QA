@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         description: data.description,
         cliente: data.cliente,
         telefone: data.telefone,
-        ammount:data.amount,
+        amount:data.amount,
         creatorName: session.user.name,
         creatorEmail: session.user.email,
         codigo: generatePaymentCode()

@@ -18,7 +18,7 @@ export default async function roleRedirectMiddleware(req: NextRequest) {
     const redirectTo =
       role === "operador"
         ? "/operador/dashboard"
-        : "/perfil/dash"; // cliente, visitante etc.
+        : "/perfil";; // cliente, visitante etc.
 
     return NextResponse.redirect(new URL(redirectTo, req.url));
   }

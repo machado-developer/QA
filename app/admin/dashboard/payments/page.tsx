@@ -9,6 +9,9 @@ import { DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from '@/component
 import { DropdownMenuContent } from '@radix-ui/react-dropdown-menu';
 import { formatCurrency } from '@/lib/utils';
 import PaymentDialog from '@/components/payment-dialog';
+import jsPDF from 'jspdf';
+import { logo } from '@/app/assets/image/logo';
+import autoTable from 'jspdf-autotable';
 
 export default function PagamentoPage() {
     const [payments, setPayments] = useState<any[]>([]);
@@ -24,7 +27,7 @@ export default function PagamentoPage() {
         try {
             const response = await fetch("/api/payments")
             const data = await response.json()
-         
+
 
             setPayments(data.payments || [])
         } catch (error) {
@@ -32,6 +35,62 @@ export default function PagamentoPage() {
 
         }
     }
+
+
+    const exportToPDF = (payment: any) => {
+        const doc = new jsPDF();
+
+        // Logo (opcional - caso tenha a logo da empresa em base64 ou URL)
+        // Adapte para a sua logo
+        doc.addImage(logo, 'PNG', 14, 10, 30, 30); // (x, y, width, height)
+        // Posição da tabela após a inserção
+        const tableFinalY = doc.table.length - 1; // Pega a posição final da tabela
+
+        // Informações da empresa
+        doc.setFontSize(12);
+        // Número da fatura
+        doc.text(`Fatura nº ${payment.codigo}`, 14, tableFinalY + 40);
+        doc.text("AQ Agendamento de Quadras", 50, 15);
+        doc.text("NIF: 123456789", 50, 22);
+        doc.text("Departamento: Finanças", 50, 29);
+        doc.text("Contacto: +244 999 999 999 | geral@aq.com", 50, 36);
+
+        // Título da fatura
+        doc.setFontSize(16);
+        doc.text("Fatura de Pagamento", 14, 50);
+
+        // Dados do cliente (supondo que você tenha os dados do pagamento selecionado)
+        doc.setFontSize(12);
+        doc.text(`Cliente: ${payment.cliente}`, 14, 60);
+        doc.text(`Telefone: ${payment.telefone}`, 14, 67);
+        doc.text(`Email: ${payment.email || "N/A"}`, 14, 74);
+
+        // Data de emissão
+        const date = new Date().toLocaleDateString();
+        doc.text(`Data de Emissão: ${date}`, 14, 81);
+
+        // Tabela com detalhes do pagamento
+        const tableBody = [
+            [`Reserva de Quadra \n ${payment.booking?.courtId}`, "1", formatCurrency(payment.amount), formatCurrency(payment.amount)]
+        ];
+
+        autoTable(doc, {
+            startY: 90, // Início abaixo do cabeçalho
+            head: [["Descrição", "Quantidade", "Preço Unitário", "Total"]],
+            body: tableBody,
+        });
+
+
+        // Total
+        const totalAmount = payment.amount; // ou calcular o total se precisar
+        doc.setFontSize(12);
+        doc.text(`Total: ${formatCurrency(totalAmount)}`, 140, tableFinalY + 10);
+
+
+
+        // Salvar como PDF
+        doc.save(`fatura_${payment.codigo}.pdf`);
+    };
 
     const handleEdit = (payment: any) => {
         setSelectedPayment(payment);
@@ -81,6 +140,7 @@ export default function PagamentoPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead>Ref</TableHead>
                                 <TableHead>Cliente</TableHead>
                                 <TableHead>Funcionário</TableHead>
                                 <TableHead>Total</TableHead>
@@ -93,11 +153,21 @@ export default function PagamentoPage() {
                         <TableBody>
                             {payments.map((pagamento) => (
                                 <TableRow key={pagamento.id}>
+
+                                    <TableCell>{pagamento?.codigo || "N/A"}</TableCell>
                                     <TableCell>{pagamento?.cliente || "N/A"}</TableCell>
-                                    <TableCell>{pagamento?.funcionario || "N/A"}</TableCell>
-                                    <TableCell>{formatCurrency(pagamento?.total)}</TableCell>
-                                    <TableCell>{new Date(pagamento?.data).toLocaleDateString() || "N/A"}</TableCell>
-                                    <TableCell>{pagamento?.status || "PENDENTE"}</TableCell>
+                                    <TableCell>{pagamento?.creatorName || "N/A"}</TableCell>
+                                    <TableCell>{formatCurrency(pagamento?.amount)}</TableCell>
+                                    <TableCell>{new Date(pagamento?.createdAt).toLocaleDateString() || "N/A"}</TableCell>
+                                    <TableCell>
+                                        <span className={`px-2 py-1 rounded-md font-medium text-sm
+                        ${pagamento.status === "PENDENTE" ? "bg-yellow-200 text-yellow-800" :
+                                                pagamento.status === "CONCLUIDO" ? "bg-green-200 text-green-800" :
+                                                    pagamento.status === "CANCELADO" ? "bg-red-200 text-red-800" :
+                                                        "bg-green-200 text-green-800"}`}>
+                                            {pagamento.status}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>{pagamento?.method?.name || "N/A"}</TableCell>
                                     <TableCell>
                                         <DropdownMenu>
@@ -110,7 +180,11 @@ export default function PagamentoPage() {
                                                 <DropdownMenuItem onClick={() => handleEdit(pagamento)}>
                                                     <Edit className="w-4 h-4 mr-2 text-green-500" /> Ver / Editar
                                                 </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => exportToPDF(pagamento)}>
+                                                    <Plus className="w-4 h-4 mr-2 text-blue-500" /> Comprovativo
+                                                </DropdownMenuItem>
                                             </DropdownMenuContent>
+
                                         </DropdownMenu>
                                     </TableCell>
                                 </TableRow>

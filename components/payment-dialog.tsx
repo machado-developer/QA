@@ -15,8 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { format } from "date-fns";
 import { formatarDisponibilidade, formatCurrency } from "@/lib/utils";
+import { PaymentStatus } from "@prisma/client";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -29,22 +29,22 @@ interface PaymentDialogProps {
 const paymentSchema = z.object({
   id: z.string().optional(),
   cliente: z.string().optional(),
-  telefone: z.string().min(9, "9 digitos no minimo"),
-  bookingId: z.string().min(1, "Funcionário é obrigatório"),
-  amount: z.coerce.number().positive("O amount deve ser positivo"),
+  status: z.string().optional(),
+  telefone: z.string().min(9, "Telefone deve ter 9 dígitos"),
+  bookingId: z.string().min(1, "Reserva é obrigatória"),
+  amount: z.coerce.number().positive("O valor deve ser positivo"),
   methodId: z.string().min(1, "Método de pagamento é obrigatório"),
   description: z.string().optional(),
-  expectedAmount: z.number(), // <- novo campo só pra validação, não será enviado ao backend
+  expectedAmount: z.number().optional(),
 }).superRefine((data, ctx) => {
-  if (data.amount < data.expectedAmount) {
+  if (data.amount < (data.expectedAmount ?? 0)) {
     ctx.addIssue({
       path: ["amount"],
       code: "custom",
-      message: `O valor pago não pode ser menor que o valor  a pagar (${formatCurrency(data.expectedAmount)})`,
+      message: `O valor pago não pode ser menor que o valor a pagar (${formatCurrency(data.expectedAmount ?? 0)})`,
     });
   }
 });
-
 
 type PaymentForm = z.infer<typeof paymentSchema>;
 
@@ -56,16 +56,25 @@ export default function PaymentDialog({
   payment,
 }: PaymentDialogProps) {
   const [error, setError] = useState("");
-  const [amountOriginal, setamountOriginal] = useState<number | null>(null);
+  const [amountOriginal, setAmountOriginal] = useState<number | null>(null);
 
-  const [cliente, setCliente] = useState<{ id: string; name: string }[]>([]);
-  const [methodPayments, setMetPaymentMethods] = useState<{ id: string; name: string }[]>([]);
+  const [methodPayments, setMethodPayments] = useState<{ id: string; name: string }[]>([]);
   const [books, setBooks] = useState<{
-    id: string; name: string, user: { name: string }, availability: {
-      startTime: string,
-      endTime: string
-    }, court: { name: string, pricePerHour: number }
+    id: string;
+    name: string;
+    user: { name: string };
+    availability: { startTime: string; endTime: string };
+    court: { name: string; pricePerHour: number };
   }[]>([]);
+
+  const defaultValues = {
+    amount: 0,
+    methodId: "",
+    description: "",
+    bookingId: "",
+    expectedAmount: 0,
+    status: "PENDENTE",
+  }
 
   const {
     register,
@@ -77,13 +86,7 @@ export default function PaymentDialog({
     setValue,
   } = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      amount: 0,
-      methodId: "",
-      description: "",
-      bookingId: "",
-      expectedAmount: 0,
-    },
+    defaultValues,
   });
 
   const onSubmit = async (data: PaymentForm) => {
@@ -111,9 +114,9 @@ export default function PaymentDialog({
     try {
       const response = await fetch("/api/payments-methods");
       const data = await response.json();
-      setMetPaymentMethods(data.methods);
+      setMethodPayments(data.methods);
     } catch (err) {
-      console.error("Erro ao buscar metods:", err);
+      console.error("Erro ao buscar métodos:", err);
     }
   };
 
@@ -123,16 +126,19 @@ export default function PaymentDialog({
       const data = await response.json();
       setBooks(data.bookings);
     } catch (err) {
-      console.error("Erro ao buscar books:", err);
+      console.error("Erro ao buscar reservas:", err);
     }
   };
 
   useEffect(() => {
-    if (open) { fetchPaymentMethods(); fetchBooks() }
-    if (open && isEditing && payment) {
-      reset(payment);
-    } else if (open && !isEditing) {
-      reset();
+    if (open) {
+      fetchPaymentMethods();
+      fetchBooks();
+      if (isEditing && payment) {
+        reset(payment);
+      } else {
+        reset(defaultValues);
+      }
     }
   }, [open, isEditing, payment, reset]);
 
@@ -142,129 +148,168 @@ export default function PaymentDialog({
         <DialogHeader>
           <DialogTitle>{isEditing ? "Editar pagamento" : "Registrar pagamento"}</DialogTitle>
         </DialogHeader>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+          {/* Estado do pagamento */}
+          <div className="space-y-1">
+            <label className="text-sm text-gray-600">Estado do Pagamento</label>
+            <Controller
+              name="status"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o Estado do Pagamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PaymentStatus).map(([key, value]) => (
+                      <SelectItem key={key} value={value}>
+                        {value}
+                      </SelectItem>
+                    ))}
+
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+
+          {/* Cliente */}
           <div>
             <label>Cliente</label>
-            <Input
-
-              type="text"
-              {...register("cliente")}
-            />
-
+            <Input type="text" {...register("cliente")} />
           </div>
+
+          {/* Telefone */}
           <div>
             <label>Telefone</label>
             <Input
               type="text"
               {...register("telefone")}
-            />
-
-          </div>
-          <div>
-
-            <label>Reserva</label>
-            <Select
-              onValueChange={(val) => {
-                setValue("bookingId", val);
-                const selected = books.find((b) => b.id === val);
-                const amount = selected?.court?.pricePerHour ?? null;
-                setamountOriginal(amount ?? null);
-                setValue("expectedAmount", amount ?? 0);
+              onInput={(e) => {
+                const input = e.currentTarget;
+                input.value = input.value.replace(/\D/g, "");
               }}
-              defaultValue={payment?.bookingId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a reserva" />
-              </SelectTrigger>
-              <SelectContent>
-                {books.map((b) => (
-                  <SelectItem key={b.id} value={b.id}>
-                    {b.user.name}-{b.court?.name}-{formatarDisponibilidade(new Date(b.availability?.startTime), (new Date(b.availability?.endTime)))}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+            {errors.telefone && <p className="text-destructive">{errors.telefone.message}</p>}
+          </div>
+
+          {/* Reserva */}
+          <div>
+            <label>Reserva</label>
+            <Controller
+              name="bookingId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onValueChange={(val) => {
+                    field.onChange(val);
+                    const selected = books.find((b) => b.id === val);
+                    const amount = selected?.court?.pricePerHour ?? 0;
+                    setAmountOriginal(amount);
+                    setValue("expectedAmount", amount);
+                  }}
+                  value={field.value}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a reserva" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {books.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.user.name} - {b.court?.name} - {formatarDisponibilidade(new Date(b.availability.startTime), new Date(b.availability.endTime))}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.bookingId && <p className="text-destructive">{errors.bookingId.message}</p>}
           </div>
+
+          {/* Valor esperado */}
           {amountOriginal !== null && (
             <div>
-              <label>amount a Pagar</label>
-              <Input
-                disabled
-                value={formatCurrency(amountOriginal)}
-              />
+              <label>Valor a Pagar</label>
+              <Input disabled value={formatCurrency(amountOriginal)} />
             </div>
           )}
+
+          {/* Valor pago */}
+          <Controller
+            name="amount"
+            control={control}
+            render={({ field: { onChange, value, ...rest } }) => (
+              <div>
+                <label>Valor (KZ)</label>
+                <Input
+                  type="text"
+                  value={typeof value === "number" && !isNaN(value) ? formatCurrency(value) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/[^\d,]/g, "").replace(",", ".");
+                    onChange(Number(raw));
+                  }}
+                  {...rest}
+                />
+                {errors.amount && <p className="text-destructive">{errors.amount.message}</p>}
+              </div>
+            )}
+          />
+
+          {/* Troco */}
           {amountOriginal !== null && watch("amount") > amountOriginal && (
             <div className="text-green-600 text-sm">
               Troco: {formatCurrency(watch("amount") - amountOriginal)}
             </div>
           )}
-          <Controller
-            name="amount"
-            control={control}
 
-            render={({ field: { onChange, value, ...fieldProps } }) => (
-              <div>
-                <label>amount (KZ)</label>
-                <Input
-                  type="text"
-                  value={
-                    typeof value === "number"
-                      ? formatCurrency(value)
-                      : value
-                  }
-                  onChange={(e) => {
-                    const rawValue = e.target.value
-                      .replace(/[^\d,]/g, "") // Remove tudo que não for número ou vírgula
-                      .replace(",", "."); // Converte vírgula para ponto
-
-                    onChange(Number(rawValue));
-                  }}
-                  {...fieldProps}
-                />
-                {errors.amount && (
-                  <p className="text-destructive">{errors.amount.message}</p>
-                )}
-              </div>
-            )}
-          />
-
+          {/* Método de pagamento */}
           <div>
             <label>Método de Pagamento</label>
-            <Select onValueChange={(val) => setValue("methodId", val)} defaultValue={payment?.methodId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha o método" />
-              </SelectTrigger>
-              <SelectContent>
-                {methodPayments.map((meth) => (
-                  <SelectItem key={meth.id} value={meth.id}>{meth.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="methodId"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Escolha o método" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {methodPayments.map((meth) => (
+                      <SelectItem key={meth.id} value={meth.id}>
+                        {meth.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.methodId && <p className="text-destructive">{errors.methodId.message}</p>}
           </div>
 
+          {/* Data de hoje */}
           <div>
             <label>Data do Pagamento</label>
             <Input
-              disabled
               type="date"
+              disabled
               value={new Date().toISOString().split("T")[0]}
             />
-
           </div>
 
+          {/* Descrição */}
           <div>
             <label>Descrição (opcional)</label>
             <Textarea {...register("description")} />
           </div>
 
+          {/* Botão */}
           <Button type="submit" disabled={isSubmitting} className="w-full bg-green-600 text-white">
             {isSubmitting ? (isEditing ? "Atualizando..." : "Registrando...") : isEditing ? "Atualizar" : "Registrar"}
           </Button>

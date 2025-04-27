@@ -154,7 +154,7 @@ CREATE TABLE `Payment` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `cliente` VARCHAR(191) NOT NULL,
-    `ammount` DECIMAL(65, 30) NOT NULL,
+    `amount` DECIMAL(65, 30) NOT NULL,
     `telefone` VARCHAR(191) NOT NULL,
     `codigo` VARCHAR(191) NOT NULL,
     `creatorName` VARCHAR(191) NOT NULL,

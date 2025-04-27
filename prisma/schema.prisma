@@ -115,7 +115,7 @@ enum Period {
 
 model Category {
   id        String   @id @default(cuid())
-  name      String
+  name      String   @unique()
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   courts    Court[]  @relation("CategoriaCourts")
@@ -181,7 +181,7 @@ model Payment {
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
   cliente      String
-  ammount      Decimal
+  amount       Decimal
   telefone     String
   codigo       String              @unique
   creatorName  String

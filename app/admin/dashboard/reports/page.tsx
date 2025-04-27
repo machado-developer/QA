@@ -24,6 +24,24 @@ interface DashboardData {
 }
 
 export default function DashboardFinanceiro() {
+
+  const [dataQuadras, setDataQuadras] = useState<{
+    topCourts: any[],
+    topCategories: any[],
+    allCourts: any[],
+  } | null>(null)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const res = await fetch('/api/admin/stats-admin/courts')
+      const json = await res.json()
+      console.log("estatiticas", json);
+
+      setDataQuadras(json)
+    }
+    fetchStats()
+  }, [])
+
   const [data, setData] = useState<DashboardData | null>(null);
 
   useEffect(() => {
@@ -59,8 +77,13 @@ export default function DashboardFinanceiro() {
     ]
   };
 
+  const renderCustomLabel = ({ name, percent }: any) => {
+    return `${name} (${(percent * 100).toFixed(0)}%)`;
+  };
+
+
   return (
-    <div className="p-6 space-y-6">
+    <>    <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Relatório Financeiro</h1>
 
       <div className="grid grid-cols-2 gap-4">
@@ -77,6 +100,7 @@ export default function DashboardFinanceiro() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-2xl shadow">
           <h2 className="text-xl font-semibold mb-2">Arrecadação por Método</h2>
+
           <PieChart width={400} height={400}>
             <Pie
               data={Object.entries(data.valoresPorMetodo).map(([name, value]) => ({ name, value }))}
@@ -88,13 +112,36 @@ export default function DashboardFinanceiro() {
               dataKey="value"
             >
               {Object.entries(data.valoresPorMetodo).map((_, index) => (
-          <Cell
-            key={`cell-${index}`}
-            fill={["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4]}
-          />
+                <Cell
+                  key={`cell-${index}`}
+                  fill={["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4]}
+                />
               ))}
             </Pie>
           </PieChart>
+
+          {/* Listagem dos métodos abaixo do gráfico */}
+          <div className="mt-6 space-y-2">
+            {Object.entries(data.valoresPorMetodo).map(([name, value], index) => {
+              const total = Object.values(data.valoresPorMetodo).reduce(
+                (acc: number, val: any) => acc + val,
+                0
+              );
+              const percent = ((value / total) * 100).toFixed(1);
+
+              return (
+                <div key={name} className="flex items-center space-x-2">
+                  {/* Bolinha da cor correspondente */}
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: ["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4] }}
+                  />
+                  <span className="text-gray-700 font-medium">{name}</span>
+                  <span className="text-gray-500 text-sm">({percent}%)</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl shadow">
@@ -113,7 +160,7 @@ export default function DashboardFinanceiro() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </div >
 
       <div className="bg-white p-4 rounded-2xl shadow">
         <h2 className="text-xl font-semibold mb-4">Detalhamento</h2>
@@ -142,6 +189,115 @@ export default function DashboardFinanceiro() {
           </table>
         </div>
       </div>
-    </div>
+    </div >
+
+
+
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl font-bold">Estatísticas de Quadras e Categorias</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Gráfico de Barras - Quadras mais reservadas */}
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">Quadras Mais Reservadas</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={dataQuadras?.topCourts.map((court: any) => ({
+                  name: court.name,
+                  reservas: court.reservas,
+                }))}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="reservas" fill="#10B981" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gráfico de Pizza - Categorias mais reservadas */}
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">Categorias Mais Reservadas</h2>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={dataQuadras?.topCategories.map((cat: any) => ({
+                    name: cat.name,
+                    value: cat.bookings,
+                  }))}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={70}
+                  outerRadius={110}
+                  dataKey="value"
+                >
+                  {dataQuadras?.topCategories.map((_: any, index: number) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={["#3B82F6", "#F59E0B", "#EF4444", "#10B981"][index % 4]}
+                    />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* Infos embaixo */}
+            <div className="mt-6 space-y-2">
+              {dataQuadras?.topCategories.map((cat: any, index: number) => {
+                const totalBookings = dataQuadras.topCategories.reduce(
+                  (acc: number, item: any) => acc + item.bookings,
+                  0
+                );
+                const percent = ((cat.bookings / totalBookings) * 100).toFixed(1);
+
+                return (
+                  <div key={cat.id} className="flex items-center space-x-2">
+                    {/* Bolinha da cor correspondente */}
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: ["#3B82F6", "#F59E0B", "#EF4444", "#10B981"][index % 4] }}
+                    />
+                    <span className="text-gray-700 font-medium">{cat.name}</span>
+                    <span className="text-gray-500 text-sm">({percent}%)</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+        </div>
+        {/* Tabela Detalhada
+        <div className="bg-white p-4 rounded-2xl shadow">
+          <h2 className="text-xl font-semibold mb-4">Todas as Quadras e Categorias</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-100 text-left">
+                  <th className="p-2">Quadra</th>
+                  <th className="p-2">Preço/Hora</th>
+                  <th className="p-2">Cidade</th>
+                  <th className="p-2">Categorias</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dataQuadras?.allCourts?.map((court: any) => (
+                  <tr key={court.id} className="border-b">
+                    <td className="p-2">{court.name}</td>
+                    <td className="p-2">Kz {court?.pricePerHour.toLocaleString()}</td>
+                    <td className="p-2">{court?.city}</td>
+                    <td className="p-2">{court.category?.map((c: any) => c.name).join(", ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div> */}
+      </div>
+    </>
+
   );
 }

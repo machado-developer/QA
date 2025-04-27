@@ -18,7 +18,7 @@ export async function middleware(req: NextRequest) {
           ? "/admin/dashboard"
           : role === "operador"
             ? "/operador/dashboard"
-            : "/perfil/dash"; // Fallback para cliente
+            : "/perfil"; // Fallback para cliente
 
       return NextResponse.redirect(new URL(redirectTo, req.url));
     }
