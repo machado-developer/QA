@@ -4,6 +4,8 @@ import HeaderNonAuth from '@/components/header-non-auth';
 import goalImage from '@/app/assets/image/goal.svg';
 import { motion } from 'framer-motion';
 import HeaderWithMenuNonAuth from '@/components/header-with-menu-non-auth';
+import { Suspense } from 'react';
+import Loading from '@/loading';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,14 +13,18 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
+
     <div className="flex flex-col min-h-screen">
-      <HeaderWithMenuNonAuth />
+      <Suspense fallback={<Loading></Loading>}>
+        <HeaderWithMenuNonAuth />
+      </Suspense>
       <section className="flex flex-wrap min-h-screen">
         {/* Conteúdo Dinâmico */}
-        <div className="w-full md:w-1/2 flex items-center justify-center p-4">
-          {children}
-        </div>
-
+        <Suspense fallback={<Loading></Loading>}>
+          <div className="w-full md:w-1/2 flex items-center justify-center p-4">
+            {children}
+          </div>
+        </Suspense>
         {/* Imagem de fundo e descrição */}
         <div className="w-full md:w-1/2 h-96 md:h-screen bg-no-repeat bg-contain bg-bottom relative" style={{ backgroundImage: `url(${goalImage.src})` }}>
           <div className="absolute inset-0 bg-green-500 bg-opacity-0 flex flex-col justify-bottom items-center text-green-300 text-top p-8">
@@ -32,5 +38,6 @@ export default function Layout({ children }: LayoutProps) {
         </div>
       </section>
     </div>
+
   );
 }

@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowDownCircle, ArrowUpCircle, Edit, MoreVertical, Plus, Trash } from "lucide-react";
-import PaymentMethodDialog,{ Ipaymenthods }  from "@/components/payment-method-dialog";
+import PaymentMethodDialog, { Ipaymenthods } from "@/components/payment-method-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import Loading from "@/loading";
+import { withRole } from "@/components/withRole";
 
 const PaymentMethodsPage = () => {
     const [methods, setmethods] = useState<Ipaymenthods[]>([]);
@@ -43,6 +45,7 @@ const PaymentMethodsPage = () => {
         }
     };
     return (
+
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div className="space-y-2">
@@ -57,53 +60,56 @@ const PaymentMethodsPage = () => {
             <Card className=" border-1">
 
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
+                    <Suspense fallback={<Loading></Loading>}>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
 
-                                <TableHead>Nome</TableHead>
+                                    <TableHead>Nome</TableHead>
 
-                                <TableHead>Acções</TableHead>
+                                    <TableHead>Acções</TableHead>
 
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {methods.map((meth, index) => (
-                                <TableRow key={index}>
-                                    <TableCell>{meth.name}</TableCell>
-                                    <TableCell>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost">
-                                                    <MoreVertical className="w-5 h-5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(meth)}>
-                                                    <Edit className="w-4 h-4 mr-2" /> Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDelete(meth)}>
-                                                    <Trash className="w-4 h-4 mr-2 text-red-500" /> Excluir
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {methods.map((meth, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>{meth.name}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost">
+                                                        <MoreVertical className="w-5 h-5" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleEdit(meth)}>
+                                                        <Edit className="w-4 h-4 mr-2" /> Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDelete(meth)}>
+                                                        <Trash className="w-4 h-4 mr-2 text-red-500" /> Excluir
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </Suspense>
                 </CardContent>
             </Card>
-
-            <PaymentMethodDialog
-                open={isDialogOpen}
-                onOpenChange={setIsDialogOpen}
-                isEditing={isEditing}
-                paymenthods={selectedTransaction}
-                onSuccess={fetchmethods}
-            />
+            <Suspense>
+                <PaymentMethodDialog
+                    open={isDialogOpen}
+                    onOpenChange={setIsDialogOpen}
+                    isEditing={isEditing}
+                    paymenthods={selectedTransaction}
+                    onSuccess={fetchmethods}
+                />
+            </Suspense>
         </div>
     );
 };
 
-export default PaymentMethodsPage;
+export default withRole(PaymentMethodsPage, ["administrador"])

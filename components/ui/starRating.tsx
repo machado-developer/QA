@@ -17,7 +17,7 @@ export default function StarRating({
             {[1, 2, 3, 4, 5].map((i) => (
                 <Star
                     key={i}
-                    className={`w-5 h-5 cursor-pointer transition-all ${(hovered ?? rating) >= i ? 'fill-yellow-400 stroke-yellow-400' : 'stroke-gray-400'
+                    className={`w-3 h-5 cursor-pointer text-xs transition-all ${(hovered ?? rating) >= i ? 'fill-yellow-400 stroke-yellow-400' : 'stroke-gray-400'
                         }`}
                     onMouseEnter={() => setHovered(i)}
                     onMouseLeave={() => setHovered(null)}

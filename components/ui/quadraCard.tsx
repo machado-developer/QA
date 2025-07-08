@@ -3,9 +3,12 @@
 import { Divide, Map } from 'lucide-react'
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import StarRating from './starRating'
 import Link from 'next/link'
+import { Button } from './button'
+import Loading from '@/loading'
+import { useSession } from "next-auth/react";
 type Quadra = {
     id: string;
     name: string;
@@ -23,40 +26,55 @@ type Quadra = {
 }
 
 export default function QuadraCard({ quadra }: { quadra: Quadra }) {
+
+    const { data: session } = useSession();
+    const [logado, setLogado] = useState(false)
+    useEffect(() => {
+        if (session?.user) {
+            setLogado(true)
+        }
+    })
     const [userRating, setUserRating] = useState<number>(quadra.rating ?? 0)
     return (
-        <motion.div
-            whileHover={{ scale: 1.03 }}
-            transition={{ duration: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl cursor-pointer transition-shadow duration-300 w-full"
-        >
-            <div className="bg-white shadow-md rounded-lg overflow-hidden w-full">
-                <Image src={quadra.featuredImage} alt={quadra.name} className="w-full    object-cover" width={400} height={200} />
-                <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-800">{quadra.name}</h3>
-                    <p className="text-red-500 font-medium">{quadra.pricePerHour}</p>
+        <Suspense fallback={<Loading></Loading>}>
+
+            <div className="bg-white shadow-md rounded-lg overflow-hidden w-48 mr-2 transition hover:shadow-lg">
+                <Image src={quadra.featuredImage} alt={quadra.name} className="w-full    object-cover" width={400} height={500} />
+                <div className="p-2">
+                    <h3 className="text-sm font-semibold text-gray-800">{quadra.name}</h3>
+                    <p className="text-red-500 font-medium text-xs">{quadra.pricePerHour}</p>
 
                     <div className="flex items-center mt-2">
-                        <Map className="text-gray-500" size={16} />
-                        <p className="text-gray-500 ml-1">{quadra.address}</p>
+                        <Map className="text-gray-500 " size={14} />
+                        <p className="text-gray-500 ml-1 text-xs">{quadra.address}</p>
                     </div>
 
-                    <p className="text-gray-500 mt-2">{quadra.description}</p>
-                    <div className="pt-2">
+                    <p className="text-gray-500  text-xs mt-2">
+                        {quadra.description
+                            ? `${quadra.description.split(" ").slice(0, 5).join(" ")}${quadra.description.split(" ").length > 5 ? "..." : ""}`
+                            : ""}
+                    </p>
+
+                    <div className="">
                         <StarRating rating={userRating} onRate={(value) => setUserRating(value)} />
                     </div>
-                    <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                        <button className="bg-green-600 text-white px-2 py-1 rounded-md hover:bg-green-500 transition duration-200 w-full sm:w-auto size-sm">
-                            Reservar
-                        </button>
-                        <span className="text-gray-500 text-sm w-full sm:w-auto text-center sm:text-left">
-                            <Link className="text-sm text-blue-600 hover:underline text-[12px]" href={`/quadras/${quadra.id}`}>
-                                Ver detalhes
+
+                    <Button className="bg-green-600 text-white mt-2 px-2 py-1 rounded-md hover:bg-green-500 transition duration-200 w-full sm:w-auto size-sm">
+                        {logado ? (
+                            <Link className="text-sm text-white-600 hover:underline text-xs" href={`/quadras/${quadra.id}`}>
+                                Reservar
                             </Link>
-                        </span>
-                    </div>
+                        ) : (
+                            <Link className="text-sm text-white-600 hover:underline text-xs" href="/auth/login">
+                                Reservar
+                            </Link>
+                        )}
+                    </Button>
+
+
                 </div>
             </div>
-        </motion.div>
+        </Suspense>
+
     )
 }

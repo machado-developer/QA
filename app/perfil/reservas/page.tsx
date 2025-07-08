@@ -4,30 +4,52 @@ import { useSession } from "next-auth/react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, Edit, Trash, MoreVertical } from "lucide-react"
-import { formatCurrency, formatDate, formatTimeToLocal } from "@/lib/utils"
+import { Plus, Edit, Trash, MoreVertical, TimerIcon } from "lucide-react"
+import { formatarDisponibilidade, formatCurrency, formatDate, formatTimeToLocal } from "@/lib/utils"
 
+import { jsPDF } from "jspdf";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import ReservaModal from "@/components/reservaModal"
 import BookingDialog from "@/components/booking-dialog"
-import { Booking } from "@prisma/client"
+import { useRouter } from "next/navigation"
+import { format } from "path"
+import { logo } from "@/app/assets/image/logo"
+import autoTable from "jspdf-autotable"
 
-
-
-
-
-interface Reserva {
-    id?: string;
-    user?: { name: string, id?: string };
-    court: { name: string, pricePerHour: number };
-    availability: { startTime: string; endTime: string; date: string };
-    status: "PENDENTE" | "CONFIRMADO" | "CANCELADO"
-}
 
 export default function reservasPage() {
     useSession()
+    const handleConfirmarReserva = async (reservaId: string) => {
+        const confirm = window.confirm("Tem certeza que deseja confirmar esta reserva? Após confirmação, o comprovante será gerado.")
+        if (!confirm) return;
+
+        try {
+            // Atualizando o status para "CONFIRMADO"
+            const response = await fetch(`/api/bookings/${reservaId}`, {
+                method: "PUT", // ou PATCH dependendo da API
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ status: "CONFIRMADO" })
+            });
+
+            if (response.ok) {
+                setIsconclude((prev) => prev = true)
+                // Buscar as reservas novamente após confirmação
+                fetchReservas();
+
+                // Gerar o comprovante após confirmação
+                const reservaConfirmada = reservas.find((reserva) => reserva.id === reservaId);
+                if (reservaConfirmada) {
+                    exportBookingToPDF(reservaConfirmada); // Gerar o comprovante em PDF
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao confirmar reserva:", error);
+        }
+    };
 
     const [reservas, setReservas] = useState<Reserva[]>([])
     const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -38,7 +60,19 @@ export default function reservasPage() {
     const [selectedreserva, setSelectedReserva] = useState<Reserva | undefined>(undefined)
     const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false)
     const [selectedreservaId, setSelectedReservaId] = useState<string | undefined>()
+    const { data: session, status } = useSession();
 
+    const router = useRouter();
+
+
+    useEffect(() => {
+        const perfil = session?.user.role
+        console.log("PERFIL LOG", perfil);
+
+        if (perfil === "ADMINISTRADOR") {
+            router.push("/dashboard/admin")
+        }
+    }, [])
     useEffect(() => {
         fetchReservas()
     }, [])
@@ -48,7 +82,7 @@ export default function reservasPage() {
             const response = await fetch("/api/bookings/cliente")
             const data = await response.json()
 
-            setReservas(data.bookings || [])
+            setReservas(data.data || [])
         } catch (error) {
             console.error("Erro ao buscar reservas:", error)
         }
@@ -59,17 +93,41 @@ export default function reservasPage() {
         setIsEditing(true)
         setIsDialogOpen(true)
     }
+    const [isConclude, setIsconclude] = useState(false)
 
     const handleCancelar = async (reservaId: string) => {
-        const confirm = window.confirm("Tem certeza que deseja cancelar  esta reserva? Esta ação é irreversível.")
-        if (!confirm) return
 
         try {
-            await fetch(`/api/bookings/${reservaId}`, { method: "DELETE" })
+            const resd = await fetch(`/api/bookings/${reservaId}`);
+            const reservas = await resd.json();
+            console.log("RESERVA SELECIONADA", reservas);
+
+            const confirm = window.confirm("Tem certeza que deseja cancelar  esta reserva? Esta ação é irreversível.")
+            if (!confirm) return
+
+            // Buscar a reserva para incluir no comprovativo
+            const res = await fetch(`/api/bookings/${reservaId}`);
+            const reserva = await res.json();
+
+            await fetch(`/api/bookings/${reservaId}/status`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    status: "CANCELADO",
+                }),
+            });
+
+            exportCancelamentoToPDF(reserva);
             fetchReservas()
         } catch (error) {
             console.error("Erro ao deletar reserva:", error)
         }
+    }
+
+    const handleReagendar = async (quadraId: string) => {
+        router.push(`/quadras/${quadraId}`)
     }
 
     const reservasFiltradas = reservas.filter((reserva) => {
@@ -82,6 +140,74 @@ export default function reservasPage() {
 
         return dentroDoIntervalo && statusValido
     })
+    
+    // Função auxiliar de formatação (certifique-se de que essas estão implementadas)
+const formatCurrency = (valor: number) => `${valor.toFixed(2)} Kz`;
+
+const exportCancelamentoToPDF = (booking: Reserva) => {
+  const doc = new jsPDF();
+
+  // Logo
+  doc.addImage(logo, 'PNG', 14, 10, 30, 30);
+
+  // Cálculos
+  const precoBase = booking.court?.pricePerHour || 0;
+  const iva = precoBase * 0.14;
+  const total = precoBase + iva;
+
+  // Cabeçalho da empresa
+  doc.setFontSize(12);
+  doc.text("QA - Agendamentos de Quadra", 200, 15, { align: "right" });
+  doc.text("Tala Tona,", 200, 21, { align: "right" });
+  doc.text("NIF: 123456789", 200, 27, { align: "right" });
+  doc.text("Tel: 999-999-999", 200, 33, { align: "right" });
+
+  // Título da Fatura
+  doc.setFontSize(16);
+  doc.text("FATURA DE CANCELAMENTO", 105, 50, { align: "center" });
+
+  // Dados do cliente e da reserva
+  doc.setFontSize(12);
+  doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 60);
+  doc.text(`Nome do Cliente: ${booking.user?.name || "N/A"}`, 14, 68);
+  doc.text(`Email: ${booking.user?.email || "N/A"}`, 14, 76);
+  doc.text(`Referência da Reserva: XXXXXXXXXXXXXXXXXX`, 14, 84);
+
+  // Tabela com detalhes
+  const autoTableResult = autoTable(doc, {
+    startY: 95,
+    head: [["Quadra", "Descrição", "Status", "Preço"]],
+    body: [[
+      booking.court?.name || "N/A",
+      formatarDisponibilidade(booking.availability?.startTime, booking.availability?.endTime),
+      "CANCELADO",
+      formatCurrency(precoBase),
+    ]],
+    foot: [
+      ["", "", "Subtotal:", precoBase],
+      ["", "", "IVA (14%):", formatCurrency(iva)],
+      ["", "", "Total:", formatCurrency(total)],
+    ],
+    footStyles: {
+      fontStyle: "bold",
+      halign: "right",
+    },
+    theme: 'grid',
+    styles: {
+      fontSize: 11,
+    },
+  });
+
+  // Observações finais
+  const finalY = (autoTableResult as any)?.finalY || 120;
+  doc.setFontSize(10);
+  
+    doc.text("Obrigado por escolher a QA - Agendamentos de Quadra!", 14, finalY + 84);
+
+
+  // Salvar o PDF
+  doc.save(`cancelamento_${booking.user?.name || "reserva"}.pdf`);
+};
 
 
     return (
@@ -122,11 +248,9 @@ export default function reservasPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">Todos</SelectItem>
-                            <SelectItem value="PAGO">Pago</SelectItem>
-                            <SelectItem value="AGUARDANDO_PAGAMENTO">Aguardando pagamento</SelectItem>
-                            <SelectItem value="CANCELADO">Cancelado</SelectItem>
-                            <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+
                         </SelectContent>
+
                     </Select>
                 </div>
             </Card>
@@ -136,7 +260,6 @@ export default function reservasPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-
                                 <TableHead>reserva</TableHead>
                                 <TableHead>Horario</TableHead>
                                 <TableHead>Data</TableHead>
@@ -148,7 +271,6 @@ export default function reservasPage() {
                         <TableBody>
                             {reservasFiltradas.map((reserva) => (
                                 <TableRow key={reserva.id}>
-
                                     <TableCell>{reserva.court.name}</TableCell>
                                     <TableCell>{`${formatTimeToLocal(new Date(reserva.availability.startTime))} - ${formatTimeToLocal(new Date(reserva.availability.endTime))}`}</TableCell>
                                     <TableCell>{formatDate(new Date(reserva.availability.date))}</TableCell>
@@ -170,12 +292,20 @@ export default function reservasPage() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(reserva as unknown as Reserva)}>
+                                                {/* <DropdownMenuItem onClick={() => handleEdit(reserva as unknown as Reserva)}>
                                                     <Edit className="w-4 h-4 mr-2 text-green-500" /> Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => reserva?.id && handleCancelar(reserva.id)}>
-                                                    <Trash className="w-4 h-4 mr-2 text-red-500" /> cancelar
-                                                </DropdownMenuItem>
+                                                </DropdownMenuItem> */}
+                                                {(reserva.status === "CANCELADO" || reserva.status === "CONCLUIDO") ? (
+                                                    <DropdownMenuItem onClick={() => {
+                                                        if (reserva?.court?.id) handleReagendar(reserva.court.id)
+                                                    }} >
+                                                        <TimerIcon className="w-4 h-4 mr-2 text-red-500" /> reagendar
+                                                    </DropdownMenuItem>
+                                                ) : (
+                                                    <DropdownMenuItem onClick={() => reserva?.id && handleCancelar(reserva.id)}>
+                                                        <Trash className="w-4 h-4 mr-2 text-red-500" /> cancelar
+                                                    </DropdownMenuItem>
+                                                )}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -188,6 +318,7 @@ export default function reservasPage() {
 
             <BookingDialog
                 open={isBookingDialogOpen}
+
                 onOpenChange={setIsBookingDialogOpen}
                 booking={selectedreserva}
                 onSuccess={fetchReservas}
@@ -195,3 +326,52 @@ export default function reservasPage() {
         </div>
     )
 }
+
+const exportBookingToPDF = (booking: Reserva) => {
+    const doc = new jsPDF();
+
+    // Logo (opcional - caso tenha a logo da empresa em base64 ou URL)
+    // Adapte para a sua logo
+    doc.addImage(logo, 'PNG', 14, 10, 30, 30); // (x, y, width, height)
+    // Posição da tabela após a inserção
+    const tableFinalY = doc.table.length - 1; // Pega a posição final da tabela
+
+    // Informações da empresa
+    doc.setFontSize(12);
+    // Número da fatura
+    doc.text("AQ Agendamento de Quadras", 50, 15);
+    doc.text("NIF: 123456789", 50, 22);
+    doc.text("Departamento: Finanças", 50, 29);
+    doc.text("Contacto: +244 999 999 999 | geral@aq.com", 50, 36);
+
+    // Título da fatura
+    doc.setFontSize(16);
+    doc.text("Fatura de Pagamento", 14, 50);
+    doc.setFontSize(16);
+    doc.text("Comprovativo de Agendamento", 14, 50);
+
+    // Dados do cliente
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Cliente: ${booking.user?.name || "N/A"}`, 14, 60);
+    doc.text(`Email: ${booking.user?.email || "N/A"}`, 14, 74);
+
+    // Dados do agendamento
+    doc.text(`Quadra: ${booking.court?.name || "N/A"}`, 14, 81);
+    doc.text(`Data: ${formatDate(new Date(booking.availability?.date || ""))}`, 14, 88);
+    doc.text(`Horário: ${booking.availability?.startTime || "N/A"} às ${booking.availability?.endTime || "N/A"}`, 14, 95);
+    doc.text(`Status: ${booking.status}`, 14, 102);
+
+    // Preço
+    doc.text(`Valor Hora: ${formatCurrency(booking.court?.pricePerHour || 0)}`, 14, 109);
+
+    // Data de emissão
+    const date = formatDate(new Date());
+    doc.setFontSize(10);
+    doc.text(`Emitido em: ${date}`, 14, 116);
+
+    // Salvar PDF
+    doc.save(`comprovativo_${booking.user?.name || "reserva"}.pdf`);
+
+};  
+

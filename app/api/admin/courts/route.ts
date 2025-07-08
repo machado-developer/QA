@@ -1,42 +1,90 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { datetimeRegex, z } from "zod"
+import { z } from "zod"
 import logAction from "@/services/auditService"
 import { prisma } from "@/lib/prisma"
 import { $Enums } from "@prisma/client";
 import { toZonedTime, format } from "date-fns-tz";
 import { differenceInMinutes } from "date-fns"
 import { parseAvailabilityToUTC } from "@/lib/dateTime.utils"
-
+import { parseISO, isBefore, isAfter, startOfDay, addHours, parse, isValid } from "date-fns";
 
 const TIMEZONE = "Africa/Luanda";
-
 const availabilitySchema = z.object({
-  startTime: z.string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid startTime"),
-  endTime: z.string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid endTime"),
   date: z.string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida, use o formato YYYY-MM-DD")
+    .refine((dateStr) => {
+      const date = parseISO(dateStr);
+      return isValid(date);
+    }, "Data inválida"),
+  active: z.boolean().optional().default(true),
+  startTime: z.string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Horário de início inválido"),
+  endTime: z.string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Horário de término inválido"),
 }).superRefine((data, ctx) => {
-  const { startTime, endTime, date } = data;
+  const { date, startTime, endTime } = data;
 
-  const startDateTime = toZonedTime(`${date}T${startTime}:00`, TIMEZONE);
-  let endDateTime = toZonedTime(`${date}T${endTime}:00`, TIMEZONE);
+  const now = new Date();
+  const minStartTime = addHours(now, 1); // mínimo 1 hora da hora atual
 
-  // Se o horário de término for anterior ao de início, assume que vai para o dia seguinte
-  if (endDateTime <= startDateTime) {
-    endDateTime = new Date(endDateTime.getTime() + 24 * 60 * 60 * 1000); // adiciona 1 dia
-  }
-
-  const duration = differenceInMinutes(endDateTime, startDateTime);
-  if (duration <= 0) {
+  const dateObj = parseISO(date);
+  if (!isValid(dateObj)) {
     ctx.addIssue({
-      path: ["endTime"],
-      message: "End time must be after start time.",
+      path: ["date"],
+      message: "Data inválida.",
       code: z.ZodIssueCode.custom,
     });
+    return; // para evitar erros em validações subsequentes
+  }
+
+  // Verifica se a data é no passado (sem considerar hora)
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (dateObj < startOfToday) {
+    ctx.addIssue({
+      path: ["date"],
+      message: "A data não pode ser no passado.",
+      code: z.ZodIssueCode.custom,
+    });
+  }
+
+  // Parse horário início e término para Date
+  const startDateTime = parse(`${date} ${startTime}`, "yyyy-MM-dd HH:mm", new Date());
+  const endDateTime = parse(`${date} ${endTime}`, "yyyy-MM-dd HH:mm", new Date());
+
+  if (!isValid(startDateTime)) {
+    ctx.addIssue({
+      path: ["startTime"],
+      message: "Horário de início inválido.",
+      code: z.ZodIssueCode.custom,
+    });
+  }
+  if (!isValid(endDateTime)) {
+    ctx.addIssue({
+      path: ["endTime"],
+      message: "Horário de término inválido.",
+      code: z.ZodIssueCode.custom,
+    });
+  }
+
+  if (isValid(startDateTime) && isValid(endDateTime)) {
+    if (!(endDateTime > startDateTime)) {
+      ctx.addIssue({
+        path: ["endTime"],
+        message: "O horário de término deve ser depois do horário de início (mesmo dia).",
+        code: z.ZodIssueCode.custom,
+      });
+    }
+
+    // Validação que o horário de início deve ter 1 hora de diferença da hora atual
+    if (startDateTime < minStartTime) {
+      ctx.addIssue({
+        path: ["startTime"],
+        message: "O horário de início deve ser pelo menos 1 hora após o horário atual.",
+        code: z.ZodIssueCode.custom,
+      });
+    }
   }
 });
 
@@ -47,6 +95,7 @@ const courtSchema = z.object({
   categoryId: z.string(),
   description: z.string().optional(),
   pricePerHour: z.number().positive(),
+  courtImages: z.array(z.string().url()).optional(),
   featuredImage: z.string().url(),
   availabilities: z.array(availabilitySchema).optional(),
 });
@@ -61,10 +110,14 @@ export async function GET(req: NextRequest) {
     //     { status: 401 }
     //   );
     // }
+    let where: Record<string, any> = {};
+    if (session?.user && session.user.role.toLocaleLowerCase() !== "cliente") {
 
+      where.createdById = session.user.id
+    }
 
     const courts = await prisma.court.findMany({
-      
+     
       include: {
         courtImages: true,
         availabilities: true,
@@ -180,6 +233,7 @@ export async function POST(req: Request) {
         const { startDateUTC, endDateUTC } = parseAvailabilityToUTC({
           date: a.date,
           startTime: a.startTime,
+          active: true,
           endTime: a.endTime,
         });
 
@@ -201,22 +255,43 @@ export async function POST(req: Request) {
       }] : [],
     });
 
+    // Criação das imagens extras
+    if (data.courtImages && data.courtImages.length > 0) {
+      await prisma.courtImage.createMany({
+        data: data.courtImages.map((url) => ({
+          courtId: court.id,
+          url,
+        })),
+      });
+    }
+
+
     await logAction(userId, "Nova Quadra Criada", `Nome: ${court.name}, Cidade: ${court.city}`)
 
     return NextResponse.json(court, { status: 201 })
   } catch (error) {
+    // if (error instanceof z.ZodError) {
+    //   console.log("Error details:", {
+    //     message: (error as any).message,
+    //     stack: (error as any).stack,
+    //     name: (error as any).name,
+    //     ...(error as any),
+    //   })
+    //   return NextResponse.json(
+    //     { message: "Invalid input data", errors: error.errors },
+    //     { status: 400 }
+    //   )
+    // }
     if (error instanceof z.ZodError) {
-      console.log("Error details:", {
-        message: (error as any).message,
-        stack: (error as any).stack,
-        name: (error as any).name,
-        ...(error as any),
-      })
       return NextResponse.json(
-        { message: "Invalid input data", errors: error.errors },
+        {
+          message: "Dados inválidos",
+          issues: error.issues,  // issues é um array com { path, message, code }
+        },
         { status: 400 }
-      )
+      );
     }
+
 
     console.log("Error details:", {
       message: (error as any).message,

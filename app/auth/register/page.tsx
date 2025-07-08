@@ -5,11 +5,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import Loading from '@/loading';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -21,7 +22,7 @@ const registerSchema = z.object({
 
 type RegisterForm = z.infer<typeof registerSchema>
 
-export default function Home() {
+export default function Register() {
   const router = useRouter()
   const [error, setError] = useState("")
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<RegisterForm>({
@@ -48,6 +49,7 @@ export default function Home() {
   }
 
   return (
+
     <Card className="w-full max-w-md border-0">
 
       <CardHeader className="space-y-1">
@@ -69,58 +71,61 @@ export default function Home() {
           recursos da plataforma
         </motion.p>
       </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)} className="h-full flex flex-col justify-between">
-        <CardContent className="space-y-4 flex-grow">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-2">
-            <Input
-              placeholder="Nome"
-              {...register("name")}
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
+      <Suspense fallback={<Loading></Loading>}>
+        <form onSubmit={handleSubmit(onSubmit)} className="h-full flex flex-col justify-between">
+          <CardContent className="space-y-4 flex-grow">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             )}
-          </div>
-          <div className="space-y-2">
-            <Input
-              type="email"
-              placeholder="Email"
-              {...register("email")}
-              className={errors.email ? "border-destructive" : ""}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Input
-              type="password"
-              placeholder="Senha"
-              {...register("password")}
-              className={errors.password ? "border-destructive" : ""}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>
-            {isSubmitting ? "Criando conta..." : "Criar conta"}
-          </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Já tem uma conta?{" "}
-            <Link href="/auth/login" className="text-primary hover:underline ">
-              Iniciar sessão
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
+            <div className="space-y-2">
+              <Input
+                placeholder="Nome"
+                {...register("name")}
+                className={errors.name ? "border-destructive" : ""}
+              />
+              {errors.name && (
+                <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="email"
+                placeholder="Email"
+                {...register("email")}
+                className={errors.email ? "border-destructive" : ""}
+              />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Senha"
+                {...register("password")}
+                className={errors.password ? "border-destructive" : ""}
+              />
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>
+              {isSubmitting ? "Criando conta..." : "Criar conta"}
+            </Button>
+            <p className="text-sm text-center text-muted-foreground">
+              Já tem uma conta?{" "}
+              <Link href="/auth/login" className="text-primary hover:underline ">
+                Iniciar sessão
+              </Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Suspense>
+
     </Card>
   )
 }

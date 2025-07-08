@@ -50,10 +50,9 @@ export function formatDateToLocal(date: Date) {
   return format(zoned, "yyyy-MM-dd", { timeZone: TIMEZONE });
 }
 
-
-
-
 export function formatarDisponibilidade(startTime: string | Date, endTime: string | Date): string {
+  console.log("DATAS", startTime, endTime);
+  
     const start = new Date(startTime);
     const end = new Date(endTime);
 

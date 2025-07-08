@@ -8,6 +8,7 @@ export async function POST(req: NextRequest) {
     try {
         const formData = await req.formData();
         const file = formData.get("file") as File;
+        const courtId = formData.get("courtId")
 
         if (!file || !file.name) {
             return NextResponse.json({ message: "Nenhum arquivo enviado" }, { status: 400 });
@@ -26,12 +27,14 @@ export async function POST(req: NextRequest) {
         const ext = path.extname(file.name);
         const fileName = `${uuid()}${ext}`;
         const filePath = path.join(uploadDir, fileName);
-
-        await writeFile(filePath, buffer);
-
         const imageUrl = `/uploads/${fileName}`;
         const baseUrl = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
         const fullImageUrl = `${baseUrl}${imageUrl}`;
+
+       
+        await writeFile(filePath, buffer);
+
+
         return NextResponse.json({ url: fullImageUrl });
     } catch (error) {
         console.error("Erro no upload:", error);

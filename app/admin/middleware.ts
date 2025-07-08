@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 const protectedRoutes: Record<string, string[]> = {
     admin: ["/admin"],
     cliente: ["/cliente"],
-    
+
 };
 
 export default withAuth(
@@ -19,19 +19,7 @@ export default withAuth(
             return NextResponse.redirect(new URL("/login", req.url));
         }
 
-        // Redirecionar da home para o painel da role
-        if (pathname === "/") {
-            const dashboardPath = `/${role}/dashboard`;
-            return NextResponse.redirect(new URL(dashboardPath, req.url));
-        }
 
-        // Verificar se a role pode acessar a rota
-        const allowedRoutes = protectedRoutes[role] || [];
-        const isAllowed = allowedRoutes.some((route) => pathname.startsWith(route));
-
-        if (!isAllowed) {
-            return NextResponse.redirect(new URL("/unauthorized", req.url));
-        }
 
         return NextResponse.next();
     },
@@ -47,7 +35,6 @@ export const config = {
     matcher: [
         "/",
         "/admin/:path*",
-        "/cliente/:path*",
-        "/publicador/:path*",
+        "/perfil/:path*",
     ],
 };

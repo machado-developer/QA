@@ -1,8 +1,9 @@
 "use client"
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Image from 'next/image';
 import logoImage from '@/app/assets/image/logo.png';
+import Loading from '@/loading';
 function HeaderNonAuth() {
     const [scrolled, setScrolled] = useState(false);
 
@@ -24,16 +25,17 @@ function HeaderNonAuth() {
     }, []);
 
     return (
-        <header className={`fixed w-full border-1  top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white shadow' : 'bg-transparent'}    py-2`}>
-            <div className="container mx-auto flex justify-between items-center">
-                <div className="logo flex mx-auto">
-                    <Link href="/" className={` text-2xl font-bold text-gray-100 ${scrolled && "text-green-400"}`}> <Image src={logoImage} alt="Logo" className="w-20 h-10 mx-auto mb-4" /></Link>
-                </div>
-                <nav className="nav">
-                    <ul className="flex space-x-5 justify-center w-full">
+        <Suspense fallback={<Loading />}>
+            <header className={`fixed w-full border-1  top-0 z-50 transition-colors duration-300 ${scrolled ? 'bg-white shadow' : 'bg-transparent'}    py-2`}>
+                <div className="container mx-auto flex justify-between items-center">
+                    <div className="logo flex mx-auto">
+                        <Link href="/" className={` text-2xl font-bold text-gray-100 ${scrolled && "text-green-400"}`}> <Image src={logoImage} alt="Logo" className="w-20 h-10 mx-auto mb-4" /></Link>
+                    </div>
+                    <nav className="nav">
+                        <ul className="flex space-x-5 justify-center w-full">
 
 
-                        {/* <li>
+                            {/* <li>
 
                             <Button
                                 size="lg"
@@ -44,10 +46,11 @@ function HeaderNonAuth() {
                             </Button>
 
                         </li> */}
-                    </ul>
-                </nav>
-            </div>
-        </header>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+        </Suspense>
     );
 };
 

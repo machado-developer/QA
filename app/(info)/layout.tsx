@@ -10,7 +10,13 @@ import goalImage from '@/app/assets/image/quadra-banner.webp';
 import Loading from '@/loading';
 export default function AboutLayout({ children }: { children: ReactNode }) {
 
+    const [path, setPath] = useState<string>('');
 
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            setPath(window.location.pathname.replace("/"," "));
+        }
+    }, []);
     return (
 
         <Suspense fallback={<Loading></Loading>} >
@@ -21,7 +27,7 @@ export default function AboutLayout({ children }: { children: ReactNode }) {
                     <div className="absolute w-full inset-0 bg-black bg-opacity-40 flex flex-col justify-center items-center text-white text-top ">
 
                         <motion.h1 className="text-3xl md:text-5xl font-extrabold mb-4 text-center" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-                            Sobre nós
+                            {path}
 
                         </motion.h1>
                         <motion.p className="text-base md:text-lg text-center" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
@@ -35,9 +41,7 @@ export default function AboutLayout({ children }: { children: ReactNode }) {
                 <main className="w-full mt-4 bg-gray-50 p-4 ">
                     {children}
                 </main>
-                <footer className="w-full text-center text-gray-600 mt-8">
-                    <p>&copy; 2023 Agendamento de Quadras. Todos os direitos reservados.</p>
-                </footer>
+               
             </div>
         </Suspense>
 

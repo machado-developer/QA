@@ -1,8 +1,8 @@
+import { PaymentStatus } from './../../../node_modules/.pnpm/@prisma+client@6.5.0_prisma_fccffc52d17c43efe09300db03dc4958/node_modules/.prisma/client/index.d';
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { PaymentStatus } from "@prisma/client";
 import { generatePaymentCode } from "@/lib/utils";
 import logAction from "@/services/auditService";
 import { z } from "zod";
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         description: data.description,
         cliente: data.cliente,
         telefone: data.telefone,
-        amount:data.amount,
+        amount: data.amount,
         creatorName: session.user.name,
         creatorEmail: session.user.email,
         codigo: generatePaymentCode()
@@ -125,12 +125,22 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    //actualizar o estado da reserva
+    await prisma.booking.update({
+      where: { id: data.bookingId },
+      data: {
+        status: "CONFIRMADO"
+      }
+    })
     // Registrar no audit log
     await logAction(
       session.user.id,
-      "Pagamento registrado",
-      `bookingId: ${data.bookingId}, methodId: ${data.methodId}`
-    );
+      "PAGAMENTO_EFETUADO",
+      `foi registrado um pagamento referente ao agendamento ${data.bookingId}, com o id do metodo de pagamento: ${data.methodId}`);
+    await logAction(
+      session.user.id,
+      "UPDATE",
+      `A reserva  id: ${data.bookingId}, foi confirmada com succeso: }`);
 
     return NextResponse.json(payment, { status: 201 });
   } catch (error) {

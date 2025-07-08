@@ -10,9 +10,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Loading from "@/loading"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
 import { z } from "zod"
 
 
@@ -75,7 +77,8 @@ export default function paymenthodsDialog({
       })
 
       if (!response.ok) {
-        throw new Error(isEditing ? "Falha ao atualizar método de pagamento" : "Falha ao criar método de pagamento")
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData?.message || errorData?.error || "Erro. Tente novamente.");
       }
 
       reset()
@@ -89,36 +92,38 @@ export default function paymenthodsDialog({
   }
 
   useEffect(() => {
-      
-      setError("")
-    }, [open])
-  
+
+    setError("")
+  }, [open])
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar método de pagamento" : "Adicionar Nova método de pagamento"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-2">
-            <Input
-              autoComplete="new-password"
-              placeholder="Nome da método de pagamento"
-              {...register("name")}
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
-            {isSubmitting ? (isEditing ? "Atualizando..." : "Adicionando...") : isEditing ? "Atualizar método de pagamento" : "Adicionar método de pagamento"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Suspense fallback={<Loading />}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Editar método de pagamento" : "Adicionar Nova método de pagamento"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Input
+                autoComplete="new-password"
+                placeholder="Nome da método de pagamento"
+                {...register("name")}
+                className={errors.name ? "border-destructive" : ""}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+              {isSubmitting ? (isEditing ? "Atualizando..." : "Adicionando...") : isEditing ? "Atualizar método de pagamento" : "Adicionar método de pagamento"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Suspense>
   )
 }

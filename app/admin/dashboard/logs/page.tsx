@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Download } from "lucide-react";
 import { logo } from "@/app/assets/image/logo";
+import Loading from "@/loading";
 
 const UserLogPage = () => {
     const [logs, setLogs] = useState<UserLog[]>([]);
@@ -143,10 +144,12 @@ const UserLogPage = () => {
 
 
     return (
+        <Suspense fallback={<Loading />}>
+
         <div className="space-y-6">
 
             <h1 className="text-3xl font-bold">Auditória </h1>
-            <p className="text-gray-600">Aqui você pode visualizar as operções realozadas pelos os usuários e gerar um relatorio em pdf.</p>
+            <p className="text-gray-600">Aqui você pode visualizar as operções realizadas pelos os usuários e gerar um relatorio em pdf.</p>
 
             <hr className="border-gray-300" />
             <h2 className="text-2xl font-light">Operações realizadas</h2>
@@ -159,7 +162,7 @@ const UserLogPage = () => {
                         value={searchAction}
                         onChange={(e) => setSearchAction(e.target.value)}
                         className="w-1/3"
-                    />
+                        />
                     <Input
                         type="date"
                         value={selectedDate}
@@ -200,7 +203,7 @@ const UserLogPage = () => {
                                 <TableRow
                                     key={index}
                                     className={index % 2 === 0 ? "bg-blue-100" : "bg-gray-100"}
-                                >
+                                    >
                                     <TableCell>{log.action}</TableCell>
                                     <TableCell>{log.details}</TableCell>
                                     <TableCell>{log.user.name}</TableCell>
@@ -219,6 +222,7 @@ const UserLogPage = () => {
                 <Button className="bg-blue-600" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>Próximo</Button>
             </div>
         </div>
+                            </Suspense>
     );
 };
 

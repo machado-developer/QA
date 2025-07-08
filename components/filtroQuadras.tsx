@@ -1,5 +1,6 @@
 'use client';
 
+import Loading from '@/loading';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
@@ -35,7 +36,7 @@ export default function FiltroQuadras() {
   };
 
   return (
-   <Suspense>
+  <Suspense fallback={<Loading />}>
      <div className="w-full flex flex-col gap-4 p-4 bg-white shadow-md rounded-lg">
       <input
         type="text"

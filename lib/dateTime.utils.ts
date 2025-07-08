@@ -7,6 +7,7 @@ type AvailabilityInput = {
     date: string; // ex: "2025-04-07"
     startTime: string; // ex: "22:00"
     endTime: string;   // ex: "01:00"
+    active: boolean;
 };
 
 /**

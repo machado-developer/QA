@@ -111,11 +111,11 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
 
         const updatedUser = await prisma.user.update({
             where: { id },
-            data: { name, email, role, password },
+            data: { name, email, role, },
         })
 
         return NextResponse.json(
-            { message: "User updated successfully", user: updatedUser },
+            { message: "Usuario actualizado", user: updatedUser },
             { status: 200 }
         )
     } catch (error) {

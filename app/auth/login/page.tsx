@@ -10,10 +10,13 @@ import { motion } from 'framer-motion';
 import { signIn } from "next-auth/react";
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import goalImage from "@/app/assets/image/goal.svg";
+import Loading from '@/loading';
+import toast from 'react-hot-toast';
+import { getToken } from 'next-auth/jwt';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -38,44 +41,61 @@ export default function Home() {
     });
 
     if (result?.error) {
+      toast.error("Email ou senha incorretos");
       setError("Email ou senha incorretos");
       return;
     }
-    router.push("/admin/dashboard");
+
+    toast.success("Login feito com sucesso");
+
+    // Aguarda a sessão estar disponível e obtém a role do usuário
+    const sessionRes = await fetch("/api/auth/session");
+    const session = await sessionRes.json();
+    const role = session?.user?.role?.toLowerCase();
+
+    let redirectTo = "/perfil";
+    if (role === "administrador") redirectTo = "/admin/dashboard";
+    else if (role === "operador") redirectTo = "/admin/dashboard/books";
+
+    router.push(redirectTo);
     router.refresh();
   };
+
 
   return (
 
     <Card className="w-full max-w-md border-0">
 
       <CardHeader className="space-y-1">
-        <motion.h1 className="text-3xl md:text-4xl font-extrabold" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-          Entrar
-        </motion.h1>
-        <motion.p className="text-sm md:text-base text-muted-foreground" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
-          Insira suas credenciais para acessar sua conta
-        </motion.p>
+        <Suspense fallback={<Loading></Loading>}>
+          <motion.h1 className="text-3xl md:text-4xl font-extrabold" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            Entrar
+          </motion.h1>
+          <motion.p className="text-sm md:text-base text-muted-foreground" initial={{ opacity: 0, y: -50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}>
+            Insira suas credenciais para acessar sua conta
+          </motion.p>
+        </Suspense>
       </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-          <Input type="email" placeholder="Email" {...register("email")} className={errors.email ? "border-destructive" : ""} />
-          {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-          <Input type="password" placeholder="Senha" {...register("password")} className={errors.password ? "border-destructive" : ""} />
-          {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>{isSubmitting ? "Entrando..." : "Entrar"}</Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Não tem uma conta? <Link href="/auth//register" className="text-primary hover:underline">Cadastre-se</Link>
-          </p>
-          <p className="text-sm text-center text-muted-foreground">
-            <Link href="/auth/recovery-password" className="text-primary hover:underline">Esqueceu a senha?</Link>
-          </p>
-        </CardFooter>
-      </form>
+      <Suspense fallback={<Loading></Loading>}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <CardContent className="space-y-4">
+            {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+            <Input type="email" placeholder="Email" {...register("email")} className={errors.email ? "border-destructive" : ""} />
+            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+            <Input type="password" placeholder="Senha" {...register("password")} className={errors.password ? "border-destructive" : ""} />
+            {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>{isSubmitting ? "Entrando..." : "Entrar"}</Button>
+            <p className="text-sm text-center text-muted-foreground">
+              Não tem uma conta? <Link href="/auth//register" className="text-primary hover:underline">Cadastre-se</Link>
+            </p>
+            <p className="text-sm text-center text-muted-foreground">
+              <Link href="/auth/recovery-password" className="text-primary hover:underline">Esqueceu a senha?</Link>
+            </p>
+          </CardFooter>
+        </form>
+      </Suspense>
     </Card>
-
   );
 }
