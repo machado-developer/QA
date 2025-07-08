@@ -6,6 +6,8 @@ export default function middleware(req: NextRequest) {
     if (req.nextUrl.pathname.startsWith("/api/categories")) {
         return NextResponse.next()
     }
+    
+    
 
     return withAuth({
         pages: {

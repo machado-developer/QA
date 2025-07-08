@@ -7,11 +7,12 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from 'framer-motion';
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from 'lucide-react';
+import Loading from '@/loading';
 
 const forgotPasswordSchema = z.object({
     email: z.string().email("Digite um email válido")
@@ -61,7 +62,7 @@ export default function ForgotPassword() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                  Se você esqueceu sua senha, não se preocupe! Estamos aqui para ajudar.
+                    Se você esqueceu sua senha, não se preocupe! Estamos aqui para ajudar.
                 </motion.h1>
                 <motion.p
                     className="text-sm text-muted-foreground"
@@ -72,24 +73,28 @@ export default function ForgotPassword() {
                     Insira seu email para receber um código de recuperação
                 </motion.p>
             </CardHeader>
-            <form onSubmit={handleSubmit(onSubmit)} className="h-full flex flex-col justify-between">
-                <CardContent className="space-y-4 flex-grow">
-                    {message && <Alert variant="default"><AlertDescription>{message}</AlertDescription></Alert>}
-                    {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
-                    <div className="space-y-1">
-                        <Input
-                            type="email"
-                            placeholder="Email"
-                            {...register("email")}
-                            className={errors.email ? "border-destructive" : ""}
-                        />
-                        {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-                    </div>
-                    <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>
-                        {isSubmitting ? "Enviando..." : "Prosseguir"} <ArrowRight className="ml-2" size={16} />
-                    </Button>
-                </CardContent>
-            </form>
+            <Suspense fallback={<Loading></Loading>}>
+                <form onSubmit={handleSubmit(onSubmit)} className="h-full flex flex-col justify-between">
+                    <CardContent className="space-y-4 flex-grow">
+                        {message && <Alert variant="default"><AlertDescription>{message}</AlertDescription></Alert>}
+                        {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
+                        <div className="space-y-1">
+                            <Input
+                                type="email"
+                                placeholder="Email"
+                                {...register("email")}
+                                className={errors.email ? "border-destructive" : ""}
+                            />
+                            {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+                        </div>
+                        <Button type="submit" className="w-full bg-green-800 hover:bg-green-700" disabled={isSubmitting}>
+                            {isSubmitting ? "Enviando..." : "Prosseguir"} <ArrowRight className="ml-2" size={16} />
+                        </Button>
+                    </CardContent>
+                </form>
+            </Suspense>
+
         </Card>
+
     );
 }

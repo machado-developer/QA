@@ -12,10 +12,11 @@ import {
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
+import { GiSoccerField } from 'react-icons/gi'
+import { withRole } from "@/components/withRole";
 const COLORS = ["#FFA500", "#3B82F6", "#EF4444", "#22C55E"]; // Pendente, Confirmado, Cancelado, Concluído
 
-const AdminDashboard = () => {
+const AdminPage = () => {
   const [stats, setStats] = useState<any>({
     totalUsers: 0,
     totalCourts: 0,
@@ -73,7 +74,7 @@ const AdminDashboard = () => {
         {[
           { title: "Usuários Registrados", value: stats.totalUsers, Icon: Users, bgColor: "bg-blue-600" },
           { title: "Total de Reservas", value: stats.bookings.TOTAL, Icon: Calendar, bgColor: "bg-orange-400" },
-          { title: "Quadras Registradas", value: stats.totalCourts, Icon: PlayCircleIcon, bgColor: "bg-gray-700" },
+          { title: "Quadras Registradas", value: stats.totalCourts, Icon: GiSoccerField, bgColor: "bg-gray-700" },
           { title: "Total Recebido", value: formatCurrency(stats.totalRecebido), Icon: DollarSignIcon, bgColor: "bg-green-600" },
         ].map(({ title, value, Icon, bgColor }, index) => (
           <Card key={index} className={`shadow-sm border border-gray-200 ${bgColor} p-4`}>
@@ -163,4 +164,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default withRole(AdminPage, ["administrador"])

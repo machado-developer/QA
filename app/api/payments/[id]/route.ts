@@ -75,6 +75,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             return NextResponse.json({ message: "Pagamento não encontrado" }, { status: 404 });
         }
 
+        if (existingPayment.status === "CONCLUIDO") {
+            return NextResponse.json({ message: "Não é permitido alterar um pagamento com status CONCLUIDO" }, { status: 403 });
+        }
+
+
         const updatedPayment = await prisma.payment.update({
             where: { id },
             data: {
@@ -99,7 +104,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             "Pagamento editado",
             `paymentId: ${id}`
         );
+        //actualizar o estado da reserva
+        if (body.status === "CONCLUIDO") {
+            await prisma.booking.update({
+                where: { id: data.bookingId },
+                data: {
+                    status: "CONFIRMADO"
+                }
+            })
+        }
 
+        if (body.status === "CANCELADO") {
+            await prisma.booking.update({ where: { id: data.bookingId } , data:{
+                status: "CANCELADO"
+            }})
+        }
         return NextResponse.json(updatedPayment, { status: 200 });
     } catch (error) {
         if (error instanceof z.ZodError) {

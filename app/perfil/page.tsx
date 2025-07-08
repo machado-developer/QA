@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Pencil, Check, X, Eye, EyeOff } from 'lucide-react';
+import { Pencil, Check, X, Eye, EyeOff, User } from 'lucide-react';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { useSession } from 'next-auth/react';
@@ -10,8 +10,8 @@ export default function PerfilCliente() {
     const [editandoPerfil, setEditandoPerfil] = useState(false);
     const [editandoSenha, setEditandoSenha] = useState(false);
     const { data: session, status } = useSession();
-    const [nome, setNome] = useState(session?.user?.name );
-    const [email, setEmail] = useState(session?.user?.email );
+    const [nome, setNome] = useState(session?.user?.name);
+    const [email, setEmail] = useState(session?.user?.email);
 
     const [novoNome, setNovoNome] = useState(nome);
     const [novoEmail, setNovoEmail] = useState(email);
@@ -62,13 +62,7 @@ export default function PerfilCliente() {
 
             {/* Dados do cliente */}
             <div className="flex items-center space-x-4 bg-white p-4 rounded-lg shadow mb-8">
-                <Image
-                    src="/user-avatar.png"
-                    alt="Avatar"
-                    width={60}
-                    height={60}
-                    className="rounded-full"
-                />
+                <User></User>
                 <div className="flex-1">
                     {editandoPerfil ? (
                         <div className="flex flex-col gap-2">

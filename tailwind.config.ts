@@ -1,5 +1,14 @@
 import type { Config } from 'tailwindcss';
-
+const colors = {
+  'dark-base': '#091426',
+  'dark-deep': '#060F1C',
+  'dark-card': '#0F1E33',
+  'dark-border': '#152944',
+  'dark-hover': '#1C3556',
+  'dark-accent': '#3B82F6',
+  'dark-primary': '#F1F5F9',
+  'dark-secondary': '#94A3B8',
+}
 const config: Config = {
   darkMode: ['class'],
   content: [
@@ -60,6 +69,7 @@ const config: Config = {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        ...colors
       },
       keyframes: {
         'accordion-down': {

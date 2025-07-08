@@ -1,5 +1,4 @@
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
 import NextAuth, { NextAuthOptions, SessionStrategy } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
@@ -26,7 +25,7 @@ export const authOptions: NextAuthOptions = {
                 try {
                     const { email, password } = loginSchema.parse(credentials);
                     const user = await prisma.user.findFirst({
-                        where: { email },
+                        where: { email, },
                     });
 
                     if (!user) {

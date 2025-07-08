@@ -1,18 +1,17 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Search, Filter } from 'lucide-react';
 import quadraPlaceholder from '@/app/assets/image/atletas.svg';
 import QuadraCardList from '@/components/ui/quadraCardList';
 import { useSearchParams } from 'next/navigation';
+import Loading from '@/loading';
 
+export const dynamic = 'force-dynamic'; // <== Impede que Next.js tente pré-renderizar
 
-export default function HomePage() {
+function FiltersWrapper({ quadras, setQuadrasFiltradas }: { quadras: any[], setQuadrasFiltradas: Function }) {
   const searchParams = useSearchParams();
-  const [quadras, setQuadras] = useState<any[]>([]);
-  const [quadrasFiltradas, setQuadrasFiltradas] = useState<any[]>([]);
-  const [categories, setCategories] = useState<{ name: string, id: string, courts?: any }[]>([]);
 
   const removeAcentos = (str: string) =>
     str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -50,54 +49,62 @@ export default function HomePage() {
     setQuadrasFiltradas(filtradas);
   }, [searchParams, quadras]);
 
-  useEffect(() => {
-    fetchQuadras();
-  }, []);
+  return null;
+}
+
+export default function HomePage() {
+  const [quadras, setQuadras] = useState<any[]>([]);
+  const [quadrasFiltradas, setQuadrasFiltradas] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{ name: string, id: string, courts?: any }[]>([]);
 
   useEffect(() => {
+    fetchQuadras();
     fetchCategories();
   }, []);
+
   const fetchQuadras = async () => {
     try {
       const response = await fetch("/api/admin/courts");
       const data = await response.json();
-      console.log("DATA COURTS", data);
-
       setQuadras(data.courts || []);
     } catch (error) {
       console.error("Erro ao buscar quadras:", error);
     }
   };
 
-  console.log("AS QUADRAS", quadras);
-
   const fetchCategories = async () => {
     try {
       const response = await fetch("/api/admin/categories");
       const data = await response.json();
-      console.log("DATA Categorias", data);
-
       setCategories(data.categories || []);
     } catch (error) {
-      console.error("Erro ao buscar categoriass:", error);
+      console.error("Erro ao buscar categorias:", error);
     }
   };
-  return (
-    
-    <main className="px-4 sm:px-6 lg:px-12 py-8 w-full">
-      
-      {/* Listagem de quadras */}
-      <section>
-        {categories.map((categoria) => (
 
-          <QuadraCardList key={categoria.name} categoria={categoria} quadras={quadras.filter(quadra => quadra.category.some((cat: { name: string }) => cat.name === categoria?.name))} />
+  return (
+    <>
+      <Suspense fallback={<Loading />}>
+        <FiltersWrapper quadras={quadras} setQuadrasFiltradas={setQuadrasFiltradas} />
+      </Suspense>
+
+      <section className='w-full'>
+        {categories?.map((categoria) => (
+          <QuadraCardList
+            key={categoria.name}
+            categoria={categoria}
+            quadras={quadras.filter((quadra) =>
+              quadra.category.some((cat: { name: string }) => cat.name === categoria?.name)
+            )}
+          />
         ))}
+
         {quadras.length === 0 && (
           <div className="text-center">
             <p className="text-gray-500">Nenhuma quadra encontrada.</p>
           </div>
         )}
       </section>
-    </main>
+    </>
   );
 }

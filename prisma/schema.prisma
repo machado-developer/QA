@@ -82,6 +82,7 @@ model Availability {
   updatedAt   DateTime  @updatedAt
   createdById String
   updatedById String?
+  active      Boolean   @default(true)
   court       Court     @relation(fields: [courtId], references: [id], onDelete: Cascade)
   user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   bookings    Booking[]
@@ -95,6 +96,7 @@ model Booking {
   courtId        String
   availabilityId String
   status         BookingStatus @default(PENDENTE) // PENDENTE, CONFIRMADO, CANCELADO
+  active         Boolean       @default(true) // Cada agendamento pode ser ativo/inativo
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   createdById    String
@@ -104,7 +106,7 @@ model Booking {
   availability   Availability  @relation(fields: [availabilityId], references: [id], onDelete: Cascade)
   payment        Payment?      @relation
 
-  @@unique([availabilityId]) // Só permite um agendamento por horário disponível
+  // Removido @@unique([availabilityId]) para permitir vários agendamentos por disponibilidade
 }
 
 enum Period {

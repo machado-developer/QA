@@ -50,10 +50,9 @@ export function formatDateToLocal(date: Date) {
   return format(zoned, "yyyy-MM-dd", { timeZone: TIMEZONE });
 }
 
-
-
-
 export function formatarDisponibilidade(startTime: string | Date, endTime: string | Date): string {
+  console.log("DATAS", startTime, endTime);
+  
     const start = new Date(startTime);
     const end = new Date(endTime);
 
@@ -71,6 +70,11 @@ export function formatarDisponibilidade(startTime: string | Date, endTime: strin
         (horas ? `${horas}h` : "") + (horas && minutos ? "" : "") + (minutos ? `${minutos}min` : "");
 
     return `dia ${dia} ${semana}, de ${ano} das ${horaInicio} até as ${horaFim} – duração de ${duracao}`;
+}
+
+export function durationInHours(start: Date, end: Date): number {
+  const duracaoMin = differenceInMinutes(end, start);
+  return duracaoMin / 60;
 }
 
 

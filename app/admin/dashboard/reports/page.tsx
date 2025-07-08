@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { withRole } from "@/components/withRole";
+import Loading from "@/loading";
+import { Suspense, useEffect, useState } from "react";
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   Tooltip, ResponsiveContainer, Legend, CartesianGrid
@@ -23,7 +25,7 @@ interface DashboardData {
   pagamentosDetalhados: PaymentDetail[];
 }
 
-export default function DashboardFinanceiro() {
+function DashboardFinanceiro() {
 
   const [dataQuadras, setDataQuadras] = useState<{
     topCourts: any[],
@@ -52,7 +54,9 @@ export default function DashboardFinanceiro() {
   }, []);
 
   if (!data) {
-    return <p className="p-4">Carregando dados...</p>;
+    return <Suspense fallback={<Loading></Loading>}>
+
+    </Suspense>;
   }
 
   const metodoChartData = {
@@ -83,113 +87,114 @@ export default function DashboardFinanceiro() {
 
 
   return (
-    <>    <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold">Relatório Financeiro</h1>
+    <Suspense fallback={<Loading></Loading>}>
+      <div className="p-6 space-y-6">
+        <h1 className="text-2xl font-bold">Relatório Financeiro</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="p-4 rounded-2xl shadow bg-white">
-          <p className="text-gray-500">Total Arrecadado</p>
-          <p className="text-3xl font-bold text-green-600">Kz {data.totalArrecadado.toLocaleString()}</p>
-        </div>
-        <div className="p-4 rounded-2xl shadow bg-white">
-          <p className="text-gray-500">Pagamentos Concluídos</p>
-          <p className="text-3xl font-bold text-blue-600">{data.quantidadePagamentos}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold mb-2">Arrecadação por Método</h2>
-
-          <PieChart width={400} height={400}>
-            <Pie
-              data={Object.entries(data.valoresPorMetodo).map(([name, value]) => ({ name, value }))}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={110}
-              label
-              dataKey="value"
-            >
-              {Object.entries(data.valoresPorMetodo).map((_, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4]}
-                />
-              ))}
-            </Pie>
-          </PieChart>
-
-          {/* Listagem dos métodos abaixo do gráfico */}
-          <div className="mt-6 space-y-2">
-            {Object.entries(data.valoresPorMetodo).map(([name, value], index) => {
-              const total = Object.values(data.valoresPorMetodo).reduce(
-                (acc: number, val: any) => acc + val,
-                0
-              );
-              const percent = ((value / total) * 100).toFixed(1);
-
-              return (
-                <div key={name} className="flex items-center space-x-2">
-                  {/* Bolinha da cor correspondente */}
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: ["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4] }}
-                  />
-                  <span className="text-gray-700 font-medium">{name}</span>
-                  <span className="text-gray-500 text-sm">({percent}%)</span>
-                </div>
-              );
-            })}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-2xl shadow bg-white">
+            <p className="text-gray-500">Total Arrecadado</p>
+            <p className="text-3xl font-bold text-green-600">Kz {data.totalArrecadado.toLocaleString()}</p>
+          </div>
+          <div className="p-4 rounded-2xl shadow bg-white">
+            <p className="text-gray-500">Pagamentos Concluídos</p>
+            <p className="text-3xl font-bold text-blue-600">{data.quantidadePagamentos}</p>
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">Arrecadação por Método</h2>
+
+            <PieChart width={400} height={400}>
+              <Pie
+                data={Object.entries(data.valoresPorMetodo).map(([name, value]) => ({ name, value }))}
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={110}
+                label
+                dataKey="value"
+              >
+                {Object.entries(data.valoresPorMetodo).map((_, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4]}
+                  />
+                ))}
+              </Pie>
+            </PieChart>
+
+            {/* Listagem dos métodos abaixo do gráfico */}
+            <div className="mt-6 space-y-2">
+              {Object.entries(data.valoresPorMetodo).map(([name, value], index) => {
+                const total = Object.values(data.valoresPorMetodo).reduce(
+                  (acc: number, val: any) => acc + val,
+                  0
+                );
+                const percent = ((value / total) * 100).toFixed(1);
+
+                return (
+                  <div key={name} className="flex items-center space-x-2">
+                    {/* Bolinha da cor correspondente */}
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: ["#EF4444", "#3B82F6", "#10B981", "#F59E0B"][index % 4] }}
+                    />
+                    <span className="text-gray-700 font-medium">{name}</span>
+                    <span className="text-gray-500 text-sm">({percent}%)</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-2xl shadow">
+            <h2 className="text-xl font-semibold mb-2">Pagamentos por Mês</h2>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart
+                data={Object.entries(data.pagamentosPorMes).map(([month, value]) => ({ month, value }))}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="value" fill="#3B82F6" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div >
+
         <div className="bg-white p-4 rounded-2xl shadow">
-          <h2 className="text-xl font-semibold mb-2">Pagamentos por Mês</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={Object.entries(data.pagamentosPorMes).map(([month, value]) => ({ month, value }))}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#3B82F6" />
-            </BarChart>
-          </ResponsiveContainer>
+          <h2 className="text-xl font-semibold mb-4">Detalhamento</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-100 text-left">
+                  <th className="p-2">Data</th>
+                  <th className="p-2">Usuário</th>
+                  <th className="p-2">Quadra</th>
+                  <th className="p-2">Método</th>
+                  <th className="p-2">Valor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.pagamentosDetalhados.map((p) => (
+                  <tr key={p.id} className="border-b">
+                    <td className="p-2">{new Date(p.data).toLocaleDateString()}</td>
+                    <td className="p-2">{p.usuario}</td>
+                    <td className="p-2">{p.court}</td>
+                    <td className="p-2">{p.metodo}</td>
+                    <td className="p-2">Kz {p.valor.toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div >
-
-      <div className="bg-white p-4 rounded-2xl shadow">
-        <h2 className="text-xl font-semibold mb-4">Detalhamento</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100 text-left">
-                <th className="p-2">Data</th>
-                <th className="p-2">Usuário</th>
-                <th className="p-2">Quadra</th>
-                <th className="p-2">Método</th>
-                <th className="p-2">Valor</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.pagamentosDetalhados.map((p) => (
-                <tr key={p.id} className="border-b">
-                  <td className="p-2">{new Date(p.data).toLocaleDateString()}</td>
-                  <td className="p-2">{p.usuario}</td>
-                  <td className="p-2">{p.court}</td>
-                  <td className="p-2">{p.metodo}</td>
-                  <td className="p-2">Kz {p.valor.toLocaleString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div >
 
 
 
@@ -297,7 +302,9 @@ export default function DashboardFinanceiro() {
           </div>
         </div> */}
       </div>
-    </>
+    </Suspense>
 
   );
 }
+
+export default withRole(DashboardFinanceiro, ["administrador"])

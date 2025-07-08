@@ -1,9 +1,9 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
   Dialog,
   DialogContent,
@@ -12,25 +12,23 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const bookingSchema = z.object({
-  id: z.string().optional(),
-  userId: z.string().min(1, "Selecione o usuário"),
-  courtId: z.string().min(1, "Selecione a quadra"),
-  availabilityId: z.string().min(1, "Selecione o horário"),
-  status: z.enum(["PENDENTE", "CONFIRMADO", "CANCELADO"]),
-});
+import { bookingSchema, bookingSchemaEdit } from "@/app/perfil/reservas/schema/bookSchema";
+import { Input } from "./ui/input";
+import { formatarDisponibilidade } from "@/lib/utils";
+import { Description } from "@radix-ui/react-dialog";
+import Loading from "@/loading";
+import toast from "react-hot-toast";
 
-type BookingForm = z.infer<typeof bookingSchema>;
+type BookingForm = z.infer<typeof bookingSchemaEdit>;
 
-interface Reserva {
-  id?: string;
-  user?: { name: string, id?: string };
-  court: { name: string, pricePerHour: number, id?: string };
-  availability: { startTime: string; endTime: string; date: string, id?: string };
-  status: "PENDENTE" | "CONFIRMADO" | "CANCELADO"
-}
 interface BookingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -56,22 +54,24 @@ export default function BookingDialog({
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<BookingForm>({
-    resolver: zodResolver(bookingSchema),
+    resolver: zodResolver(bookingSchemaEdit),
     defaultValues: {
-      userId: "",
-      courtId: "",
       availabilityId: "",
       status: "PENDENTE",
     },
   });
 
+  const selectedAvailabilityId = watch("availabilityId");
+  const selectedStatus = watch("status");
+
   const fetchData = async () => {
     const [usersRes, courtsRes, availabilitiesRes] = await Promise.all([
-      fetch("/api/admin/users").then(res => res.json()),
-      fetch("/api/admin/courts").then(res => res.json()),
-      fetch("/api/admin/availabilities").then(res => res.json()),
+      fetch("/api/admin/users").then((res) => res.json()),
+      fetch("/api/admin/courts").then((res) => res.json()),
+      fetch(`/api/admin/courts/${booking?.court?.id}/availiabilities`).then((res) => res.json()),
     ]);
 
     setUsers(usersRes.users || []);
@@ -83,7 +83,18 @@ export default function BookingDialog({
     if (open) {
       fetchData();
       if (isEditing && booking) {
-        reset(booking);
+        reset(
+          {
+            availabilityId: booking.availability?.id || "",
+            status:
+              booking.status === "PENDENTE" ||
+                booking.status === "CONFIRMADO" ||
+                booking.status === "CANCELADO"
+                ? booking.status
+                : "PENDENTE",
+          },
+          { keepDirtyValues: false }
+        );
       } else {
         reset();
       }
@@ -91,113 +102,104 @@ export default function BookingDialog({
     }
   }, [open]);
 
+  console.log("Disponbilidades", availabilities);
+
   const onSubmit = async (data: BookingForm) => {
     try {
       const response = await fetch(
-        isEditing ? `/api/admin/bookings/${data.id}` : "/api/admin/bookings",
+        `/api/bookings/${booking?.id}`,
         {
-          method: isEditing ? "PUT" : "POST",
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         }
       );
 
-      if (!response.ok) throw new Error("Erro ao salvar agendamento");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData?.message || errorData?.error || "Erro ao deletar reserva. Tente novamente.");
+      }
 
       onSuccess();
       onOpenChange(false);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Erro desconhecido");
+      toast.error((error as Error)?.message || "Erro ao atualizar agendamento. Tente novamente.");
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
-        </DialogHeader>
+    <Suspense fallback={<Loading />}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Editar Agendamento" : "Novo Agendamento"}</DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          <div>
-            <label>Usuário</label>
-            <Select onValueChange={(val) => setValue("userId", val)} defaultValue={booking?.user?.id || ""}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o usuário" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user: any) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.userId && <p className="text-destructive">{errors.userId.message}</p>}
-          </div>
+            <div>
+              <label>Cliente/Usuario</label>
+              <Input readOnly defaultValue={booking?.user?.name || "N/A"}></Input>
+            </div>
 
-          <div>
-            <label>Quadra</label>
-            <Select onValueChange={(val) => setValue("courtId", val)} defaultValue={booking?.court.id || ""}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a quadra" />
-              </SelectTrigger>
-              <SelectContent>
-                {courts.map((court: any) => (
-                  <SelectItem key={court.id} value={court.id}>
-                    {court.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.courtId && <p className="text-destructive">{errors.courtId.message}</p>}
-          </div>
+            <div>
+              <label>Quadra</label>
+              <Input readOnly defaultValue={booking?.court?.name || "N/A"}></Input>
 
-          <div>
-            <label>Horário</label>
-            <Select onValueChange={(val) => setValue("availabilityId", val)} defaultValue={booking?.availability.id || ""}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um horário" />
-              </SelectTrigger>
-              <SelectContent>
-                {availabilities.map((av: any) => (
-                  <SelectItem key={av.id} value={av.id}>
-                    {`${av.date} ${av.startTime}–${av.endTime}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.availabilityId && <p className="text-destructive">{errors.availabilityId.message}</p>}
-          </div>
+            </div>
 
-          <div>
-            <label>Status</label>
-            <Select onValueChange={(val: "PENDENTE" | "CONFIRMADO" | "CANCELADO") => setValue("status", val)} defaultValue={booking?.status || "PENDENTE"}>
+            <Description className="text-sm text-muted-foreground leading-relaxed border rounded-md p-3 bg-muted/50">
+              {booking?.availability?.startTime && booking?.availability?.endTime
+                ? formatarDisponibilidade(booking.availability.startTime, booking.availability.endTime)
+                : "N/A"}
+            </Description>
 
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
-                <SelectItem value="CANCELADO">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-            {errors.status && <p className="text-destructive">{errors.status.message}</p>}
-          </div>
+            <div>
+              <label>Horário</label>
+              <Select value={selectedAvailabilityId} onValueChange={(val) => setValue("availabilityId", val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um horário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availabilities?.map((av: any) => (
+                    <SelectItem key={av.id} value={av.id}>
+                      {av?.startTime && av?.endTime
+                        ? formatarDisponibilidade(av.startTime, av.endTime)
+                        : "N/A"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.availabilityId && <p className="text-destructive">{errors.availabilityId.message}</p>}
+            </div>
 
-          <Button type="submit" className="w-full bg-green-600 text-white" disabled={isSubmitting}>
-            {isSubmitting ? (isEditing ? "Salvando..." : "Criando...") : isEditing ? "Salvar" : "Criar"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <div>
+              <label>Status</label>
+              <Select value={selectedStatus} onValueChange={(val) => setValue("status", val as any)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PENDENTE">Pendente</SelectItem>
+                  <SelectItem value="CONFIRMADO">Confirmado</SelectItem>
+                  <SelectItem value="CANCELADO">Cancelado</SelectItem>
+                  <SelectItem value="CONCLUIDO">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+              {errors.status && <p className="text-destructive">{errors.status.message}</p>}
+            </div>
+
+            <Button type="submit" className="w-full bg-green-600 text-white" disabled={isSubmitting}>
+              {isSubmitting ? (isEditing && "Editando...") : isEditing && "Editar"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Suspense>
   );
 }
-export { bookingSchema }

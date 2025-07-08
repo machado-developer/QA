@@ -2,11 +2,12 @@
 'use client'
 import { Suspense } from "react";
 import QuadraPageContent from "./(component)/QuadraPageContent";
+import Loading from "@/loading";
  
 
 export default function QuadrasPage() {
   return (
-    <Suspense fallback={<div>Carregando quadras...</div>}>
+    <Suspense fallback={<Loading></Loading>}>
       <QuadraPageContent />
     </Suspense>
   );

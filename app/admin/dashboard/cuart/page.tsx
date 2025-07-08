@@ -11,17 +11,23 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CourtAvailabilityDialog from "@/components/quadra-avaliability-dialog"
+import CourtImagesDialog from "@/components/quadra-images-dialog"
+import Link from "next/link"
+import { withRole } from "@/components/withRole"
+import toast from "react-hot-toast"
 
 interface Quadra {
   id?: string;
   name: string;
   address: string;
   city: string;
-
   description?: string;
   pricePerHour: number;
   featuredImage: string;
   categoryId?: string;
+  category?:[{
+    id:string 
+  }] 
   user?: { name: string };
   availabilities?: [{
     id: string;
@@ -32,9 +38,10 @@ interface Quadra {
     period: string;
     endTime: string;
   }];
+  courtImages?: File[]
 }
 
-export default function QuadrasPage() {
+function QuadrasPage() {
   useSession()
   const [quadras, setQuadras] = useState<{
     id?: string;
@@ -53,41 +60,86 @@ export default function QuadrasPage() {
   }[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
   const [selectedQuadra, setSelectedQuadra] = useState<Quadra | undefined>(undefined);
-  const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
-  const [selectedQuadraId, setSelectedQuadraId] = useState<string | undefined>(undefined);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [openAvaliability, setOpenAvaliability] = useState(false);
+  const [openImagem, setOpenImagem] = useState(false);
   const [court, setCourt] = useState<Quadra | null>(null);
+  const [error, setError] = useState("");
 
   const handleOpenAvailability = (quadra: Quadra) => {
     setCourt(quadra);
     setOpenAvaliability(true);
   };
 
+  const handleOpenImagem = (quadra: Quadra) => {
+    setCourt(quadra);
+    setOpenImagem(true);
+  };
   const handleSaveAvailability = async (courtId: string, newAvailability: any[]) => {
     try {
-      const response = await fetch(`/api/admin/courts/${courtId}/availability`, {
+      const response = await fetch(`/api/admin/courts/${courtId}/availiabilities`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ availability: newAvailability }),
+        body: JSON.stringify(newAvailability),
       });
+      const resJson = await response.json()
 
       if (response.ok) {
         console.log("availabilities atualizadas com sucesso.");
+        setOpenAvaliability(false)
         fetchQuadras(); // Atualiza a lista de quadras
-      } else {
-        console.error("Erro ao atualizar availabilities.");
       }
+  
+      if (!response.ok) {
+        // Se o backend enviou erros detalhados, exiba
+        if (resJson.issues) {
+          // Pode mapear as issues para mensagens amigáveis
+          const messages = resJson.issues.map((issue: any) => `${issue.path.join(".")}: ${issue.message}`);
+          toast.error(messages.join(" | "))
+          setError(messages.join(" | "));
+        } else if (resJson.message) {
+          toast.error(resJson.message)
+          setError(resJson.message);
+        } else {
+           toast.error(resJson.message)
+          setError("Erro desconhecido ao salvar.");
+        }
+        return;
+      }
+
     } catch (error) {
+      toast.error("Erro ao salvar availabilities:"+ error)
       console.error("Erro ao salvar availabilities:", error);
     }
   };
+
+  const handleSaveImagens = async (courtId?: string, newImages?: File[]) => {
+    try {
+      if (courtId && newImages) {
+        const response = await fetch(`/api/admin/courts/${courtId}/images`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ courtImages: newImages }),
+        });
+        if (response.ok) {
+          console.log("imagens atualizadas com sucesso.");
+          fetchQuadras(); // Atualiza a lista de quadras
+        } else {
+          console.error("Erro ao atualizar imagens.");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar imagens:", error);
+    }
+  };
+
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -117,7 +169,6 @@ export default function QuadrasPage() {
 
     }
   }
-
   const handleEdit = (quadra: Quadra): void => {
     setSelectedQuadra(quadra);
     setIsEditing(true);
@@ -143,8 +194,6 @@ export default function QuadrasPage() {
 
   return (
     <div className="space-y-6">
-
-
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Lista das quadras</h1>
@@ -227,6 +276,10 @@ export default function QuadrasPage() {
                         <DropdownMenuItem onClick={() => handleOpenAvailability(quadra)}>
                           <Plus className="w-4 h-4 mr-2 text-blue-500" /> Disponibilidade
                         </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/dashboard/cuart/${quadra?.id}/files`}>
+                            <Plus className="w-4 h-4 mr-2 text-blue-500" /> Imagens</Link>
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -247,6 +300,8 @@ export default function QuadrasPage() {
       )} */}
       {court && (
         <CourtAvailabilityDialog
+          error={error}
+          setError={setError}
           open={openAvaliability}
           onOpenChange={setOpenAvaliability}
           courtId={court.id!}
@@ -254,8 +309,21 @@ export default function QuadrasPage() {
           onSave={(newAvailability) => handleSaveAvailability(court.id!, newAvailability)}
         />
       )}
-
-      <QuadraDialog court={selectedQuadra} open={isDialogOpen} onOpenChange={setIsDialogOpen} isEditing={isEditing} onSuccess={fetchQuadras} />
+      <QuadraDialog
+        court={
+          selectedQuadra
+            ? {
+                ...selectedQuadra,
+                categoryId: selectedQuadra.categoryId ?? "",
+              }
+            : undefined
+        }
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        isEditing={isEditing}
+        onSuccess={fetchQuadras}
+      />
     </div>
   )
 }
+export default withRole(QuadrasPage, ["administrador", "operador"])

@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowDownCircle, ArrowUpCircle, Edit, MoreVertical, Plus, Trash } from "lucide-react";
 import CategoryDialog, { ICategory } from "@/components/category-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import toast from "react-hot-toast";
+import { withRole } from "@/components/withRole";
 
 const CategoriesPage = () => {
     const [categories, setCategories] = useState<ICategory[]>([]);
@@ -33,12 +35,16 @@ const CategoriesPage = () => {
         setIsDialogOpen(true);
     };
     const handleDelete = async (categories: ICategory): Promise<void> => {
-        if (window.confirm(`Tem certeza que deseja excluir esta transação? Essa ação não pode ser desfeita.`)) {
+        if (window.confirm(`Tem certeza que deseja excluir esta categoria? Essa ação não pode ser desfeita.`)) {
             try {
-                await fetch(`/api/admin/categories/${categories.id}`, { method: "DELETE" });
+                const resp = await fetch(`/api/admin/categories/${categories.id}`, { method: "DELETE" });
+                if (resp.ok) {
+                    toast.success("eliminado com sucesso")
+                }
                 fetchCategories();
             } catch (error) {
-                console.error("Erro ao excluir transação:", error);
+                toast.error("erro ao excluir a categoria:" + error)
+                console.error("Erro ao excluir categoria:", error);
             }
         }
     };
@@ -63,7 +69,7 @@ const CategoriesPage = () => {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                
+
                                 <TableHead>Nome</TableHead>
 
                                 <TableHead>Acções</TableHead>
@@ -109,4 +115,4 @@ const CategoriesPage = () => {
     );
 };
 
-export default CategoriesPage;
+export default withRole(CategoriesPage, ["administrador"])

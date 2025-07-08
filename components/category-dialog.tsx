@@ -10,9 +10,11 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import Loading from "@/loading"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
+import toast from "react-hot-toast"
 import { z } from "zod"
 
 
@@ -73,8 +75,11 @@ export default function CategoryDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
-
+      if (response.ok) {
+        toast.success(isEditing ?"actualizado com sucesso":"criado com sucesso")
+      }
       if (!response.ok) {
+        toast.success(isEditing ? "Falha ao atualizar categoria" : "Falha ao criar categoria")
         throw new Error(isEditing ? "Falha ao atualizar categoria" : "Falha ao criar categoria")
       }
 
@@ -88,31 +93,33 @@ export default function CategoryDialog({
 
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isEditing ? "Editar Categoria" : "Adicionar Nova Categoria"}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-2">
-            <Input
-              autoComplete="new-password"
-              placeholder="Nome da Categoria"
-              {...register("name")}
-              className={errors.name ? "border-destructive" : ""}
-            />
-            {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
-          </div>
-          <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
-            {isSubmitting ? (isEditing ? "Atualizando..." : "Adicionando...") : isEditing ? "Atualizar Categoria" : "Adicionar Categoria"}
-          </Button>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Suspense fallback={<Loading />}>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{isEditing ? "Editar Categoria" : "Adicionar Nova Categoria"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Input
+                autoComplete="new-password"
+                placeholder="Nome da Categoria"
+                {...register("name")}
+                className={errors.name ? "border-destructive" : ""}
+              />
+              {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
+            </div>
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white" disabled={isSubmitting}>
+              {isSubmitting ? (isEditing ? "Atualizando..." : "Adicionando...") : isEditing ? "Atualizar Categoria" : "Adicionar Categoria"}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </Suspense>
   )
 }

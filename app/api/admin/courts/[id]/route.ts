@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         const court = await prisma.court.update({
             where: {
                 id,
-                createdById: session.user.id,
+                // createdById: session.user.id,
             },
             data: {
                 name: data.name,
@@ -52,7 +52,15 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         return NextResponse.json(court, { status: 200 });
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return NextResponse.json({ message: "Invalid input data" }, { status: 400 });
+            console.error("Error details:", {
+                message: (error as any).message,
+                stack: (error as any).stack,
+                name: (error as any).name,
+                ...(error as any),
+            });
+
+            return NextResponse.json({ message: "Invalid input data", error }, { status: 400 });
+
         }
 
         console.error("Error details:", {
@@ -116,7 +124,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         const court = await prisma.court.findUnique({
             where: {
                 id,
-                createdById: session.user.id,
+                // createdById: session.user.id,
             },
             include: {
                 bookings: true,
@@ -139,12 +147,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         await prisma.court.delete({
             where: {
                 id,
-                createdById: session.user.id,
+
             },
         });
 
 
-        await logAction(session.user.id, "Eliminação de Quadra", `ID: ${id}`);
+        await logAction(session.user.id, "Eliminação de Quadra", `ID: ${id} por:${session.user.name}`);
 
         return NextResponse.json({ message: "Quadra deletada com sucesso" }, { status: 200 });
     } catch (error) {

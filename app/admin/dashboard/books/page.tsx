@@ -6,36 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Plus, Edit, Trash, MoreVertical } from "lucide-react"
 import { formatCurrency, formatDate, formatTimeToLocal } from "@/lib/utils"
-import QuadraDialog from "@/components/quadra-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import ReservaModal from "@/components/reservaModal"
+import BookingDialog from "@/components/booking-dialog"
+import { withRole } from "@/components/withRole"
+import toast from "react-hot-toast"
 
 
-
-interface Quadra {
-  id?: string;
-  name: string;
-  address: string;
-  city: string;
-  description?: string;
-  pricePerHour: number;
-  featuredImage: string;
-  categoryId?: string;
-  user?: { name: string };
-  disponibilidades?: any[];
-}
-
-interface Reserva {
-  id?: string;
-  user?: { name: string };
-  court: { name: string, pricePerHour: number };
-  availability: { startTime: string; endTime: string; date: string };
-  status: string;
-}
-
-export default function QuadrasPage() {
+function ReservasPage() {
   useSession()
 
   const [reservas, setReservas] = useState<Reserva[]>([])
@@ -44,40 +24,45 @@ export default function QuadrasPage() {
   const [startTime, setStartTime] = useState("")
   const [endTime, setEndTime] = useState("")
   const [statusFilter, setStatusFilter] = useState("")
-  const [selectedQuadra, setSelectedQuadra] = useState<Quadra | undefined>(undefined)
+  const [selectedreserva, setSelectedreserva] = useState<Reserva | undefined>(undefined)
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false)
-  const [selectedQuadraId, setSelectedQuadraId] = useState<string | undefined>()
+  const [selectedreservaId, setSelectedreservaId] = useState<string | undefined>()
 
   useEffect(() => {
     fetchReservas()
-  }, [])
+  }, [isEditing])
 
   const fetchReservas = async () => {
     try {
       const response = await fetch("/api/bookings")
       const data = await response.json()
       console.log("Reservas recebidas:", data)
-      setReservas(data.bookings || [])
+      setReservas(data.data || [])
     } catch (error) {
       console.error("Erro ao buscar reservas:", error)
     }
   }
 
-  const handleEdit = (quadra: Quadra) => {
-    setSelectedQuadra(quadra)
+  const handleEdit = (reserva: Reserva) => {
+    setSelectedreserva(reserva)
     setIsEditing(true)
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (quadraId: string) => {
-    const confirm = window.confirm("Tem certeza que deseja deletar esta quadra? Esta ação é irreversível.")
+  const handleDelete = async (reservaId: string) => {
+    const confirm = window.confirm("Tem certeza que deseja deletar esta reserva? Esta ação é irreversível.")
     if (!confirm) return
 
     try {
-      await fetch(`/api/bookings/${quadraId}`, { method: "DELETE" })
+      const res = await fetch(`/api/bookings/${reservaId}`, { method: "DELETE" })
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData?.message || errorData?.error || "Erro ao deletar reserva. Tente novamente.");
+      }
       fetchReservas()
     } catch (error) {
-      console.error("Erro ao deletar quadra:", error)
+
+      console.error("Erro ao deletar reserva:", error)
     }
   }
 
@@ -139,7 +124,7 @@ export default function QuadrasPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Cliente</TableHead>
-                <TableHead>Quadra</TableHead>
+                <TableHead>reserva</TableHead>
                 <TableHead>Horario</TableHead>
                 <TableHead>Data</TableHead>
                 <TableHead>Status</TableHead>
@@ -172,7 +157,7 @@ export default function QuadrasPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(reserva as unknown as Quadra)}>
+                        <DropdownMenuItem onClick={() => handleEdit(reserva as unknown as Reserva)}>
                           <Edit className="w-4 h-4 mr-2 text-green-500" /> Editar
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => reserva?.id && handleDelete(reserva.id)}>
@@ -187,13 +172,17 @@ export default function QuadrasPage() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* <QuadraDialog
-        open={isTransactionDialogOpen}
-        onOpenChange={setIsTransactionDialogOpen}
-        quadraId={selectedQuadraId}
+      <BookingDialog
+        booking={selectedreserva}
+        isEditing={isEditing}
         onSuccess={fetchReservas}
-      /> */}
+        open={isDialogOpen}
+        onOpenChange={
+          setIsDialogOpen
+        }
+      >
+
+      </BookingDialog>
     </div>
   )
-}
+} export default withRole(ReservasPage, ["administrador", "operador"])

@@ -10,18 +10,30 @@ import QuadraDialog from "@/components/quadra-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import CourtAvailabilityDialog from "@/components/quadra-avaliability-dialog"
+import CourtImagesDialog from "@/components/quadra-images-dialog"
 
 interface Quadra {
   id?: string;
   name: string;
   address: string;
   city: string;
+
   description?: string;
   pricePerHour: number;
   featuredImage: string;
   categoryId?: string;
   user?: { name: string };
-  disponibilidades?: any[]; // se tiver
+  availabilities?: [{
+    id: string;
+    courtId: string;
+    userId: string | null;
+    startTime: string;
+    date: string;
+    period: string;
+    endTime: string;
+  }];
+  courtImages?: string[]
 }
 
 export default function QuadrasPage() {
@@ -36,6 +48,10 @@ export default function QuadrasPage() {
     featuredImage: string;
     categoryId?: string;
     user?: { name: string };
+    category?: [{
+      name: string,
+      id: string
+    }]
   }[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isEditing, setIsEditing] = useState<boolean>(false)
@@ -45,7 +61,91 @@ export default function QuadrasPage() {
   const [selectedQuadra, setSelectedQuadra] = useState<Quadra | undefined>(undefined);
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false);
   const [selectedQuadraId, setSelectedQuadraId] = useState<string | undefined>(undefined);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [openAvaliability, setOpenAvaliability] = useState(false);
+  const [openImagem, setOpenImagem] = useState(false);
+  const [court, setCourt] = useState<Quadra | null>(null);
+  const [error, setError] = useState("");
 
+  const handleOpenAvailability = (quadra: Quadra) => {
+    setCourt(quadra);
+    setOpenAvaliability(true);
+  };
+
+  const handleOpenImagem = (quadra: Quadra) => {
+    setCourt(quadra);
+    setOpenImagem(true);
+  };
+  const handleSaveAvailability = async (courtId: string, newAvailability: any[]) => {
+    try {
+      const response = await fetch(`/api/admin/courts/${courtId}/availiabilities`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAvailability),
+      });
+      const resJson = await response.json()
+
+      if (response.ok) {
+        console.log("availabilities atualizadas com sucesso.");
+        setOpenAvaliability(false)
+        fetchQuadras(); // Atualiza a lista de quadras
+      } if (!response.ok) {
+        // Se o backend enviou erros detalhados, exiba
+        if (resJson.issues) {
+          // Pode mapear as issues para mensagens amigáveis
+          const messages = resJson.issues.map((issue: any) => `${issue.path.join(".")}: ${issue.message}`);
+          setError(messages.join(" | "));
+        } else if (resJson.message) {
+          setError(resJson.message);
+        } else {
+          setError("Erro desconhecido ao salvar.");
+        }
+        return;
+      }
+
+    } catch (error) {
+      console.error("Erro ao salvar availabilities:", error);
+    }
+  };
+
+  const handleSaveImagens = async (courtId?: string, newImages?: File[]) => {
+    try {
+      if (courtId && newImages) {
+        const response = await fetch(`/api/admin/courts/${courtId}/images`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ courtImages: newImages }),
+        });
+        if (response.ok) {
+          console.log("imagens atualizadas com sucesso.");
+          fetchQuadras(); // Atualiza a lista de quadras
+        } else {
+          console.error("Erro ao atualizar imagens.");
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao salvar imagens:", error);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch("/api/admin/categories");
+      const data = await response.json();
+      setCategories(data.categories || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
   useEffect(() => {
     fetchQuadras()
   }, [])
@@ -62,6 +162,7 @@ export default function QuadrasPage() {
 
     }
   }
+  const [courtImages, setCourtImages] = useState<string[]>(court?.courtImages ?? []);
 
   const handleEdit = (quadra: Quadra): void => {
     setSelectedQuadra(quadra);
@@ -79,19 +180,12 @@ export default function QuadrasPage() {
       }
     }
   }
-
   const filteredQuadras = quadras.filter((quadra) => {
-    // const progress = (quadra.savedAmount / quadra.targetAmount) * 100
-    // const isCompleted = progress >= 100
-    // const quadraDate = new Date(quadra.deadline)
-
-    // if (startDate && quadraDate < new Date(startDate)) return false
-    // if (endDate && quadraDate > new Date(endDate)) return false
-    // if (statusFilter === "completed" && !isCompleted) return false
-    // if (statusFilter === "pending" && isCompleted) return false
-
-    return true
-  })
+    if (statusFilter && statusFilter !== "todos(as)" && !quadra.category?.some((category) => category.id === statusFilter)) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -112,18 +206,21 @@ export default function QuadrasPage() {
       {/*  */}
       <Card className="shadow-none border-1 p-4">
         <div className="flex gap-4 mb-4">
-          <Input
+          {/* <Input
             autoComplete="new-password" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} placeholder="Start Date" />
           <Input
-            autoComplete="new-password" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} placeholder="End Date" />
+            autoComplete="new-password" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} placeholder="End Date" /> */}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger>
-              <SelectValue placeholder="Filter by Status" />
+              <SelectValue placeholder="Categorias" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="todos(as)">All</SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -135,10 +232,11 @@ export default function QuadrasPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Usuário</TableHead>
+
                 <TableHead>Nome</TableHead>
                 <TableHead>Endereço</TableHead>
                 <TableHead>Cidade</TableHead>
+                <TableHead>Categoria</TableHead>
                 <TableHead>Preço por Hora</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -146,10 +244,17 @@ export default function QuadrasPage() {
             <TableBody>
               {filteredQuadras.map((quadra) => (
                 <TableRow key={quadra.id}>
-                  <TableCell>{quadra?.user?.name || "N/A"}</TableCell>
+
                   <TableCell>{quadra.name}</TableCell>
                   <TableCell>{quadra.address}</TableCell>
                   <TableCell>{quadra.city}</TableCell>
+                  <TableCell>
+                    {quadra?.category?.map((category) => (
+                      <span key={category.id}>
+                        {category.name}
+                      </span>
+                    ))}
+                  </TableCell>
                   <TableCell>{formatCurrency(quadra.pricePerHour)}</TableCell>
                   <TableCell>
                     <DropdownMenu>
@@ -164,6 +269,12 @@ export default function QuadrasPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => quadra?.id && handleDelete(quadra.id)}>
                           <Trash className="w-4 h-4 mr-2 text-red-500" /> Deletar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenAvailability(quadra)}>
+                          <Plus className="w-4 h-4 mr-2 text-blue-500" /> Disponibilidade
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleOpenImagem(quadra)}>
+                          <Plus className="w-4 h-4 mr-2 text-blue-500" /> Imagens
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -183,8 +294,45 @@ export default function QuadrasPage() {
           onSuccess={fetchQuadras}
         />
       )} */}
+      {court && (
+        <CourtAvailabilityDialog
+          error={error}
+          setError={setError}
+          open={openAvaliability}
+          onOpenChange={setOpenAvaliability}
+          courtId={court.id!}
+          initialAvailability={court.availabilities || []}
+          onSave={(newAvailability) => handleSaveAvailability(court.id!, newAvailability)}
+        />
+      )}
 
-      <QuadraDialog court={selectedQuadra} open={isDialogOpen} onOpenChange={setIsDialogOpen} isEditing={isEditing} onSuccess={fetchQuadras} />
+      {court && (
+        <CourtImagesDialog
+          open={openImagem}
+          onOpenChange={setOpenImagem}
+          courtId={court?.id}
+          initialImages={court.courtImages
+            ? (typeof court.courtImages[0] === "string"
+              ? court.courtImages
+              : court.courtImages.map((img: any) => img.url))
+            : []}
+          onSave={(newImages) => handleSaveImagens(court.id, newImages)}
+        />
+      )}
+      <QuadraDialog
+        court={
+          selectedQuadra
+            ? {
+                ...selectedQuadra,
+                categoryId: selectedQuadra.categoryId ?? "",
+              }
+            : undefined
+        }
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        isEditing={isEditing}
+        onSuccess={fetchQuadras}
+      />
     </div>
   )
 }
