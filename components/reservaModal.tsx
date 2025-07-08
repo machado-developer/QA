@@ -7,7 +7,11 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { Suspense, useEffect, useState } from 'react'
 import clsx from 'clsx'
+<<<<<<< HEAD
 import { formatarDisponibilidade, formatDate, formatHour } from '@/lib/utils'
+=======
+import { durationInHours, formatarDisponibilidade, formatCurrency, formatDate, formatHour } from '@/lib/utils'
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
 import { useRouter } from 'next/navigation'
 import Loading from '@/loading'
 import toast from 'react-hot-toast'
@@ -96,6 +100,10 @@ export default function ReservaModal({ isOpen, onClose, quadraId, quadraNome }: 
       const response = await fetch(`/api/admin/courts/${quadraId}/availiabilities`);
       const resq = await fetch(`/api/admin/courts/${quadraId}/`)
       const dataquadra = await resq.json()
+<<<<<<< HEAD
+=======
+      setQuadra(dataquadra.court)
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
       const data = await response.json();
 
       const agendamentos = data?.availabilities?.filter((d: any) => d?.startTime && d?.endTime);
@@ -182,18 +190,32 @@ const total = precoBase + iva;
         // Tabela com dados do agendamento
        const autoTableResult = autoTable(doc, {
         startY: 95,
+<<<<<<< HEAD
         head: [["Item", "Descrição", "Preço"]],
+=======
+        head: [["Item", "Descrição", "Preço Unitário", "Preço Total"]],
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
         body: [
           [
             agendamento.servico,
             agendamento.data,
             agendamento.preco ? `${Number(agendamento.preco)} Kz` : "N/A",
+<<<<<<< HEAD
           ],
         ],
         foot: [
           ["", "Subtotal:", `${precoBase} Kz`],
           ["", "IVA (14%):", `0,00 Kz`],
           ["", "Total:", `${precoBase} Kz`],
+=======
+            agendamento.precoT ? `${Number(agendamento.precoT)} Kz` : "N/A",
+          ],
+        ],
+        foot: [
+          ["","", "Subtotal:", `${agendamento.precoT} Kz`],
+          ["","", "IVA :", `0,00 Kz`],
+          ["", " ","Total: ` ${agendamento.precoT} Kz`"],
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
         ],
         footStyles: {
           fontStyle: 'bold',
@@ -208,9 +230,13 @@ const total = precoBase + iva;
         },
 });
 
+<<<<<<< HEAD
 
         // Totais detalhados
        
+=======
+        // Totais detalhados
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
         // Totais
         const totalY = (autoTableResult as any)?.finalY ? (autoTableResult as any).finalY + 10 : 105;
         doc.setFontSize(12);
@@ -225,15 +251,29 @@ const total = precoBase + iva;
       };
 
       // Exemplo de uso:
+<<<<<<< HEAD
       const intervaloSelecionado = buscarIntervaloHorario(horarios, horarioSelecionado);
+=======
+      const [start, end] = horarioSelecionado.split(' - ');
+      const inicio = new Date(start);
+      const fim = new Date(end);
+      const diffMs = fim.getTime() - inicio.getTime();
+      const diffHoras = diffMs / (1000 * 60 * 60);
+      const intervaloSelecionado = diffHoras;
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
       exportFaturaAgendamentoPDF({
         logoBase64: logo,
         clienteNome: session?.user.name || "Usuário",
         clienteEmail: session?.user.email || "Usuário",
         servico: quadraNome,
         data: formatarDisponibilidade(horarioSelecionado.split(' - ')[0], horarioSelecionado.split(' - ')[1]),
+<<<<<<< HEAD
         
         preco:  quadra?.pricePerHour || 0,
+=======
+        preco:  formatCurrency( quadra?.pricePerHour || 0),
+        precoT: formatCurrency(durationInHours(inicio,fim)* (quadra?.pricePerHour || 0)),
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
         referencia: `RES-${Math.floor(Math.random() * 1000000)}`, // Referência aleatória
       });
       onClose();

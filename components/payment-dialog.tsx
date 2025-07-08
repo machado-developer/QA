@@ -215,11 +215,27 @@ export default function PaymentDialog({
                 render={({ field }) => (
                   <Select
                     onValueChange={(val) => {
+<<<<<<< HEAD
                       field.onChange(val);
                       const selected = books.find((b) => b.id === val);
                       const amount = selected?.court?.pricePerHour ?? 0;
                       setAmountOriginal(amount);
                       setValue("expectedAmount", amount);
+=======
+                      
+                        field.onChange(val);
+                        const selected = books.find((b) => b.id === val);
+                        let amount = 0;
+                        if (selected) {
+                        const start = new Date(selected.availability.startTime);
+                        const end = new Date(selected.availability.endTime);
+                        const diffMs = end.getTime() - start.getTime();
+                        const diffHoras = diffMs / (1000 * 60 * 60);
+                        amount = (selected.court?.pricePerHour ?? 0) * diffHoras;
+                        }
+                        setAmountOriginal(amount);
+                        setValue("expectedAmount", amount);
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
                     }}
                     value={field.value}
                   >

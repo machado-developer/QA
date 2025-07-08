@@ -72,6 +72,11 @@ export function formatarDisponibilidade(startTime: string | Date, endTime: strin
     return `dia ${dia} ${semana}, de ${ano} das ${horaInicio} até as ${horaFim} – duração de ${duracao}`;
 }
 
+export function durationInHours(start: Date, end: Date): number {
+  const duracaoMin = differenceInMinutes(end, start);
+  return duracaoMin / 60;
+}
+
 
 
 export function generatePaymentCode(): string {

@@ -140,74 +140,74 @@ export default function reservasPage() {
 
         return dentroDoIntervalo && statusValido
     })
-    
+
     // Função auxiliar de formatação (certifique-se de que essas estão implementadas)
-const formatCurrency = (valor: number) => `${valor.toFixed(2)} Kz`;
+    const formatCurrency = (valor: number) => `${valor.toFixed(2)} Kz`;
 
-const exportCancelamentoToPDF = (booking: Reserva) => {
-  const doc = new jsPDF();
+    const exportCancelamentoToPDF = (booking: Reserva) => {
+        const doc = new jsPDF();
 
-  // Logo
-  doc.addImage(logo, 'PNG', 14, 10, 30, 30);
+        // Logo
+        doc.addImage(logo, 'PNG', 14, 10, 30, 30);
 
-  // Cálculos
-  const precoBase = booking.court?.pricePerHour || 0;
-  const iva = precoBase * 0.14;
-  const total = precoBase + iva;
+        // Cálculos
+        const precoBase = booking.court?.pricePerHour || 0;
+        const iva = precoBase * 0.14;
+        const total = precoBase + iva;
 
-  // Cabeçalho da empresa
-  doc.setFontSize(12);
-  doc.text("QA - Agendamentos de Quadra", 200, 15, { align: "right" });
-  doc.text("Tala Tona,", 200, 21, { align: "right" });
-  doc.text("NIF: 123456789", 200, 27, { align: "right" });
-  doc.text("Tel: 999-999-999", 200, 33, { align: "right" });
+        // Cabeçalho da empresa
+        doc.setFontSize(12);
+        doc.text("QA - Agendamentos de Quadra", 200, 15, { align: "right" });
+        doc.text("Tala Tona,", 200, 21, { align: "right" });
+        doc.text("NIF: 123456789", 200, 27, { align: "right" });
+        doc.text("Tel: 999-999-999", 200, 33, { align: "right" });
 
-  // Título da Fatura
-  doc.setFontSize(16);
-  doc.text("FATURA DE CANCELAMENTO", 105, 50, { align: "center" });
+        // Título da Fatura
+        doc.setFontSize(16);
+        doc.text("FATURA DE CANCELAMENTO", 105, 50, { align: "center" });
 
-  // Dados do cliente e da reserva
-  doc.setFontSize(12);
-  doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 60);
-  doc.text(`Nome do Cliente: ${booking.user?.name || "N/A"}`, 14, 68);
-  doc.text(`Email: ${booking.user?.email || "N/A"}`, 14, 76);
-  doc.text(`Referência da Reserva: XXXXXXXXXXXXXXXXXX`, 14, 84);
+        // Dados do cliente e da reserva
+        doc.setFontSize(12);
+        doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 60);
+        doc.text(`Nome do Cliente: ${booking.user?.name || "N/A"}`, 14, 68);
+        doc.text(`Email: ${booking.user?.email || "N/A"}`, 14, 76);
+        doc.text(`Referência da Reserva: XXXXXXXXXXXXXXXXXX`, 14, 84);
 
-  // Tabela com detalhes
-  const autoTableResult = autoTable(doc, {
-    startY: 95,
-    head: [["Quadra", "Descrição", "Status", "Preço"]],
-    body: [[
-      booking.court?.name || "N/A",
-      formatarDisponibilidade(booking.availability?.startTime, booking.availability?.endTime),
-      "CANCELADO",
-      formatCurrency(precoBase),
-    ]],
-    foot: [
-      ["", "", "Subtotal:", precoBase],
-      ["", "", "IVA (14%):", formatCurrency(iva)],
-      ["", "", "Total:", formatCurrency(total)],
-    ],
-    footStyles: {
-      fontStyle: "bold",
-      halign: "right",
-    },
-    theme: 'grid',
-    styles: {
-      fontSize: 11,
-    },
-  });
+        // Tabela com detalhes
+        const autoTableResult = autoTable(doc, {
+            startY: 95,
+            head: [["Quadra", "Descrição", "Status", "Preço"]],
+            body: [[
+                booking.court?.name || "N/A",
+                formatarDisponibilidade(booking.availability?.startTime, booking.availability?.endTime),
+                "CANCELADO",
+                formatCurrency(precoBase),
+            ]],
+            foot: [
+                ["", "", "Subtotal:", precoBase],
+                ["", "", "IVA (14%):", formatCurrency(iva)],
+                ["", "", "Total:", formatCurrency(total)],
+            ],
+            footStyles: {
+                fontStyle: "bold",
+                halign: "right",
+            },
+            theme: 'grid',
+            styles: {
+                fontSize: 11,
+            },
+        });
 
-  // Observações finais
-  const finalY = (autoTableResult as any)?.finalY || 120;
-  doc.setFontSize(10);
-  
-    doc.text("Obrigado por escolher a QA - Agendamentos de Quadra!", 14, finalY + 84);
+        // Observações finais
+        const finalY = (autoTableResult as any)?.finalY || 120;
+        doc.setFontSize(10);
+
+        doc.text("Obrigado por escolher a QA - Agendamentos de Quadra!", 14, finalY + 84);
 
 
-  // Salvar o PDF
-  doc.save(`cancelamento_${booking.user?.name || "reserva"}.pdf`);
-};
+        // Salvar o PDF
+        doc.save(`cancelamento_${booking.user?.name || "reserva"}.pdf`);
+    };
 
 
     return (
@@ -373,5 +373,9 @@ const exportBookingToPDF = (booking: Reserva) => {
     // Salvar PDF
     doc.save(`comprovativo_${booking.user?.name || "reserva"}.pdf`);
 
-};  
+<<<<<<< HEAD
+};
 
+=======
+};
+>>>>>>> 7c64d482b8f5b62d45a0fedb0b4b80368bb1f824
